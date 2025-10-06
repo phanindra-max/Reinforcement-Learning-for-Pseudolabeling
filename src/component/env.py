@@ -1,58 +1,98 @@
 import gymnasium as gym
-from gymnasium import spaces
-import numpy as np
 import torch
+import numpy as np
 from torch.nn.functional import softmax
-from src.component.utils import compute_reward
 
+# -----------------------------
+# Temporary reward function
+# -----------------------------
+def compute_reward(pred_label, true_label, action, probs):
+    """
+    Basic reward:
+    +1 if prediction and action match true label
+    -1 otherwise
+    Weighted by confidence
+    """
+    if action == -1:
+        return -0.1  # penalty for skipping
+    confidence = probs[action]
+    return confidence if pred_label == true_label else -confidence
+
+
+# -----------------------------
+# Main Environment Class
+# -----------------------------
 class PseudoLabelEnv(gym.Env):
-    """
-    Gym-style environment for RL-based pseudo-labeling.
-    Each step corresponds to assigning a pseudo-label to one unlabeled sample.
-    State = model prediction probabilities + entropy (uncertainty)
-    Reward = based on match between action and true label, weighted by confidence
-    """
+    metadata = {"render_modes": []}
 
-    def __init__(self, unlabeled_loader, model, device, num_classes=10, threshold=0):
+    def __init__(self, unlabeled_loader, model, device, threshold=0.5):
         super().__init__()
-
         self.unlabeled_loader = unlabeled_loader
         self.model = model
         self.device = device
-        self.num_classes = num_classes
         self.threshold = threshold
 
-        # Gym spaces
-        self.action_space = spaces.Discrete(num_classes)  # select a class label
-        self.observation_space = spaces.Box(
-            low=0.0,
-            high=1.0,
-            shape=(num_classes + 1,),  # probs + entropy
-            dtype=np.float32
+        # RL-compatible spaces
+        num_classes = 10  # <-- adjust this to your dataset
+        # state: class probs + entropy (1D vector)
+        self.observation_space = gym.spaces.Box(
+            low=0.0, high=1.0, shape=(num_classes + 1,), dtype=np.float32
         )
+        # action: choose class index or -1 to skip
+        self.action_space = gym.spaces.Discrete(num_classes)
 
-        # Initialize episode variables
-        self.data_iter = None
-        self.current_sample = None
-        self.done = False
+        self.reset()
 
+    # -----------------------------
+    # RESET
+    # -----------------------------
     def reset(self, *, seed=None, options=None):
-        """
-        Reset the environment for a new episode.
-        Returns initial state and info.
-        """
         super().reset(seed=seed)
         self.data_iter = iter(self.unlabeled_loader)
         self.done = False
         self.current_sample = None
-        state = self._get_next_state()
+
+        state, _ = self._get_next_state()
         info = {}
         return state, info
 
+    # -----------------------------
+    # STEP
+    # -----------------------------
+    def step(self, action):
+        # If no current sample, episode done
+        if self.current_sample is None:
+            return None, 0, True, False, {}
+
+        x, true_label, probs = self.current_sample
+        probs = probs[0]  # shape: [num_classes]
+
+        # Confidence threshold: skip low-confidence samples
+        if action != -1 and probs[action] < self.threshold:
+            action = -1
+
+        # Reward computation
+        reward = 0
+        if action != -1:
+            pred_label = np.argmax(probs)
+            reward = compute_reward(pred_label, true_label.item(), action, probs)
+
+        # Next state
+        next_state, _ = self._get_next_state()
+
+        terminated = self.done
+        truncated = False
+
+        info = {
+            "true_label": true_label.item() if true_label is not None else None,
+            "pred_label": np.argmax(probs) if probs is not None else None,
+            "confidence": probs[action] if action != -1 else 0,
+            "action_taken": action,
+        }
+
+        return next_state, reward, terminated, truncated, info
+
     def _get_next_state(self):
-        """
-        Loads the next sample and returns state vector (probs + entropy)
-        """
         try:
             x, y = next(self.data_iter)
             x = x.to(self.device)
@@ -60,62 +100,26 @@ class PseudoLabelEnv(gym.Env):
 
             with torch.no_grad():
                 logits = self.model(x)
-                probs = softmax(logits, dim=1)  # shape [B, num_classes]
-                entropy = -torch.sum(probs * torch.log(probs + 1e-8), dim=1, keepdim=True)  # [B,1]
+                probs = softmax(logits, dim=1)
+                entropy = -torch.sum(probs * torch.log(probs + 1e-8), dim=1, keepdim=True)
 
-            # Flatten probs + entropy into a single vector
+            # Combine probabilities + entropy into a single state vector
             state_vector = torch.cat([probs.view(-1), entropy.view(-1)]).cpu().numpy()
 
             self.current_sample = (x, y, probs.cpu().numpy())
-            return state_vector
+            return state_vector.astype(np.float32), y
 
         except StopIteration:
             self.done = True
             self.current_sample = None
-            return None
+            return np.zeros(self.observation_space.shape, dtype=np.float32), None
 
-    def step(self, action):
-        """
-        Perform a pseudo-labeling action.
-        Returns: next_state, reward, terminated, truncated, info
-        """
-        # If no current sample, episode is done
-        if self.current_sample is None:
-            return None, 0, True, False, {}
-
-        x, true_label, probs = self.current_sample
-        probs = probs[0]  # shape: [num_classes]
-
-        # Apply confidence threshold
-        if action != -1 and probs[action] < self.threshold:
-            action = -1
-
-        # Compute reward
-        reward = 0
-        if action != -1:
-            pred_label = np.argmax(probs)
-            reward = compute_reward(pred_label, true_label.item(), action, probs)
-
-        # Move to next sample
-        next_state = self._get_next_state()
-
-        terminated = self.done
-        truncated = False
-
-        # Info dict for debugging
-        info = {
-            "true_label": true_label.item() if true_label is not None else None,
-            "pred_label": np.argmax(probs) if probs is not None else None,
-            "confidence": probs[action] if action != -1 else 0,
-            "action_taken": action
-        }
-
-        return next_state, reward, terminated, truncated, info
 
     def render(self):
         pass
 
     def close(self):
         pass
+
 
 
