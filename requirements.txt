@@ -1,0 +1,40 @@
+# RLGSSL Implementation Requirements
+# Reinforcement Learning Guided Semi-Supervised Learning
+# Based on paper: arXiv:2405.01760v1
+
+# Core deep learning framework
+torch>=1.12.0
+torchvision>=0.13.0
+torchaudio>=0.12.0
+
+# Numerical computation and data handling
+numpy>=1.21.0
+scipy>=1.9.0
+
+# Visualization and plotting
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Experiment tracking and utilities
+tensorboard>=2.8.0
+tqdm>=4.64.0
+
+# Image processing (for data augmentation)
+pillow>=9.0.0
+
+# Configuration and experiment management
+pyyaml>=6.0
+omegaconf>=2.2.0
+
+# Reinforcement learning utilities
+gymnasium>=1.2.0
+
+# Development tools
+typing-extensions>=4.3.0
+dataclasses>=0.8
+
+# Optional: For advanced visualizations
+plotly>=5.0.0
+
+# Testing
+pytest>=7.0.0

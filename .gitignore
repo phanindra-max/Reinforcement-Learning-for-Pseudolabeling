@@ -1,26 +1,47 @@
-# --- Python related ---
+# Python cache files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 
-# --- Virtual environments ---
-.venv/
+# Virtual environment
 venv/
 env/
+ENV/
 
-# --- PyCharm project settings ---
+# IDE files
+.vscode/
 .idea/
 
-# --- macOS system file ---
+# OS files
 .DS_Store
+Thumbs.db
 
-# --- Logs ---
+# Data files and datasets
+data/
+cifar-10-batches-py/
+cifar-10-python.tar.gz
+*.tar.gz
+
+# Log files
 *.log
+logs/
 
+# Experiment artifacts
+experiments/
+checkpoints/
+*.pth
+*.pt
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Temporary files
+temp/
+tmp/
 # --- Environment variables / secrets ---
 .env
 *.env
 
 # removing data files as the size is large
 src/data
+trained_models/
