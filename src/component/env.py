@@ -1,22 +1,9 @@
 import gymnasium as gym
+from torchvision import datasets, transforms
+from sklearn.model_selection import train_test_split
 import torch
 import numpy as np
 from torch.nn.functional import softmax
-
-# -----------------------------
-# Temporary reward function
-# -----------------------------
-def compute_reward(pred_label, true_label, action, probs):
-    """
-    Basic reward:
-    +1 if prediction and action match true label
-    -1 otherwise
-    Weighted by confidence
-    """
-    if action == -1:
-        return -0.1  # penalty for skipping
-    confidence = probs[action]
-    return confidence if pred_label == true_label else -confidence
 
 
 # -----------------------------
@@ -25,24 +12,56 @@ def compute_reward(pred_label, true_label, action, probs):
 class PseudoLabelEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, unlabeled_loader, model, device, threshold=0.5):
+    def __init__(self, NUM_LABELED, NUM_UNLABELED, NUM_VALIDATION):
         super().__init__()
-        self.unlabeled_loader = unlabeled_loader
-        self.model = model
-        self.device = device
-        self.threshold = threshold
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # RL-compatible spaces
-        num_classes = 10  # <-- adjust this to your dataset
-        # state: class probs + entropy (1D vector)
-        self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(num_classes + 1,), dtype=np.float32
+        # Data: load_data now returns true labels for unlabeled data
+        labeled_data, unlabeled_data, validation_data = self.load_data(NUM_LABELED, NUM_UNLABELED, NUM_VALIDATION)
+
+        self.labeled_x, self.labeled_y, self.unlabeled_x, self.unlabeled_y_true = \
+            labeled_data[0].to(self.device), labeled_data[1].to(self.device), \
+            unlabeled_data[0].to(self.device), unlabeled_data[1].to(self.device)
+        self.val_x, self.val_y = validation_data[0].to(self.device), validation_data[1].to(self.device)
+
+        # Environment Specs
+        self.num_classes = 10
+        self.feature_dim = self.labeled_x.shape[1]
+
+        # State: [image_features, softmax_predictions, entropy]
+        state_dim = self.feature_dim + self.num_classes + 1
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,))
+
+        # Action: [0..9] for labels, 10 for 'skip'
+        self.action_space = gym.spaces.Discrete(self.num_classes + 1)
+
+    # -----------------------------
+    # Load Data
+    # -----------------------------
+    def load_data(self, NUM_LABELED, NUM_UNLABELED, NUM_VALIDATION):
+        transform = transforms.ToTensor()
+        mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+
+        # The data is already in a 28x28 format from the ToTensor() transform.
+        all_data = mnist_train.data.float() / 255.0
+        all_targets = mnist_train.targets
+
+        # First split off validation
+        data_temp, val_data, targets_temp, val_targets = train_test_split(
+            all_data, all_targets, test_size=NUM_VALIDATION, stratify=all_targets, random_state=42
         )
-        # action: choose class index or -1 to skip
-        self.action_space = gym.spaces.Discrete(num_classes)
 
-        self.reset()
+        # Now split labeled vs unlabeled
+        labeled_x, unlabeled_x, labeled_y, unlabeled_y_true = train_test_split(
+            data_temp, targets_temp, train_size=NUM_LABELED, test_size=NUM_UNLABELED, stratify=targets_temp, random_state=42
+        )
 
+        labeled_data = (labeled_x.view(-1, 784), labeled_y)
+        unlabeled_data = (unlabeled_x.view(-1, 784), unlabeled_y_true)
+        validation_data = (val_data.view(-1, 784), val_targets)
+
+        return labeled_data, unlabeled_data, validation_data
+    
     # -----------------------------
     # RESET
     # -----------------------------
@@ -92,59 +111,35 @@ class PseudoLabelEnv(gym.Env):
 
         return next_state, reward, terminated, truncated, info
 
-    def train_downstream_model(self, initial_training=False, epochs=1):
-        if initial_training:
-            x_train, y_train = self.labeled_x, self.labeled_y
-        else:
-            if not self.newly_pseudo_labeled_data: return # Nothing to train on
+    # -----------------------------
+    # Temporary reward function
+    # -----------------------------
+    def calculate_reward(self, pred_label, true_label, action, probs):
+        """
+        Basic reward:
+        +1 if prediction and action match true label
+        -1 otherwise
+        Weighted by confidence
+        """
+        if action == -1:
+            return -0.1  # penalty for skipping
+        confidence = probs[action]
+        return confidence if pred_label == true_label else -confidence
+    
+    
+    def _get_state(self):
+        if self.current_idx >= len(self.unlabeled_x):
+            return np.zeros(self.observation_space.shape)
 
-            pseudo_x = torch.stack([item[0] for item in self.newly_pseudo_labeled_data])
-            pseudo_y = torch.stack([item[1] for item in self.newly_pseudo_labeled_data])
-
-            x_train = torch.cat([self.labeled_x, pseudo_x])
-            y_train = torch.cat([self.labeled_y, pseudo_y])
-
-        dataset = TensorDataset(x_train.view(-1, 1, 28, 28), y_train)
-        loader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-        self.downstream_model.train()
-        for _ in range(epochs):
-            for x_b, y_b in loader:
-                self.optimizer.zero_grad()
-                out = self.downstream_model(x_b)
-                loss = self.criterion(out, y_b.long())
-                loss.backward()
-                self.optimizer.step()
-
-    def _evaluate_model(self, x_data, y_data):
-        self.downstream_model.eval()
         with torch.no_grad():
-            # Reshape validation data for the CNN
-            x_data = x_data.view(-1, 1, 28, 28)
-            preds = torch.argmax(self.downstream_model(x_data), dim=1)
-            return accuracy_score(y_data.cpu(), preds.cpu())
+            img_data = self.unlabeled_x[self.current_idx]
+            logits = self.downstream_model(img_data.unsqueeze(0))
+            preds = torch.softmax(logits, dim=1).squeeze()
+            entropy = -torch.sum(preds * torch.log(preds + 1e-9))
 
-    def _get_next_state(self):
-        try:
-            x, y = next(self.data_iter)
-            x = x.to(self.device)
-            y = y.to(self.device)
-
-            with torch.no_grad():
-                logits = self.model(x)
-                probs = softmax(logits, dim=1)
-                entropy = -torch.sum(probs * torch.log(probs + 1e-8), dim=1, keepdim=True)
-
-            # Combine probabilities + entropy into a single state vector
-            state_vector = torch.cat([probs.view(-1), entropy.view(-1)]).cpu().numpy()
-
-            self.current_sample = (x, y, probs.cpu().numpy())
-            return state_vector.astype(np.float32), y
-
-        except StopIteration:
-            self.done = True
-            self.current_sample = None
-            return np.zeros(self.observation_space.shape, dtype=np.float32), None
+            # Concatenate features, predictions, and entropy to form the state
+            state = torch.cat([img_data, preds, entropy.unsqueeze(0)])
+            return state.cpu().numpy()
 
     def render(self):
         pass
