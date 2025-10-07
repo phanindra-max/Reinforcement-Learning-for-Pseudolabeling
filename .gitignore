@@ -38,3 +38,9 @@ checkpoints/
 # Temporary files
 temp/
 tmp/
+# --- Environment variables / secrets ---
+.env
+*.env
+
+# removing data files as the size is large
+src/data
