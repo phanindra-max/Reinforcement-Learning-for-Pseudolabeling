@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch.nn.functional import softmax
-from src.component.utils import compute_reward
+from component.utils import compute_reward
 
 class PseudoLabelEnv:
     def __init__(self, unlabeled_loader, model, device, threshold=0):

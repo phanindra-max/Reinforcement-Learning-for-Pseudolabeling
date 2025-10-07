@@ -1,5 +1,8 @@
 # RLGSSL Implementation Documentation
 
+- Author: Satya Phanindra Kumar Kalaga
+- GitHub: [phanindra-max](https://github.com/phanindra-max)
+
 ## Overview
 
 This implementation provides a complete reproduction of **"Reinforcement Learning-Guided Semi-Supervised Learning"** (Heidari et al., arXiv:2405.01760v1) with significant adaptive enhancements for improved performance and stability.

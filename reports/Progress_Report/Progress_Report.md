@@ -60,19 +60,18 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 * [ ] Merge final results and relevant codes with `main` branch
 
 ---
-## Date: Week 7 - Month Day Year 
+## Date: Week 7 - October 07 2025
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Understand and merge Aishwarya's changes with main branch
+    - Start working on the main project files (main.py, model.py, env.py, train.py, test.py)
+    - Work on PG algorithm
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Update folder structure after merging Aishwarya's changes
+* [x] Create a separate branch for the main project files
+* [x] Push PG algorithm changes to main branch
+
 ---
 ## Date: Week 8 - Month Day Year 
 - Topics of discussion

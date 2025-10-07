@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from src.model import SimpleCNN, DQN
+from src.model import SimpleCNN, DQN, PolicyGradient
 from src.env import PseudoLabelEnv
 from component.utils import retrain_downstream_model, evaluate_model, ReplayBuffer, get_ssl_mnist, evaluate_model_accuracy
 import matplotlib.pyplot as plt
