@@ -3,106 +3,76 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 - Useful links
   - https://github.com/im-luka/markdown-cheatsheet
 
+# Progress Report
+- Author: Satya Phanindra Kumar Kalaga
+- GitHub: [phanindra-max](https://github.com/phanindra-max)
 ---
-## Date: Week 1 - Month Day Year 
+## Date: Week 1-2 - September 02 2025
+
+## Date: Weeks 3 - September 09 2025 
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Understanding RL Framework (MDP)
+    - Explore Gymanasium Environments
+    - Explore RL Algorithms (Q-Learning, DQN, Policy Gradients)
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Understand Markov Decision Process (MDP), and sequential decision making
+* [x] Understand designing State and Action spaces, Reward functions
+* [x] Implement basic algorithms (Simple Heuristic) in CartPole-v1
+
 ---
 
-## Date: Week 2 - Month Day Year 
+## Date: Week 4 - September 16 2025
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Literature Review on relevant papers
+    - Explore RL algorithms (Q-Learning, DQN, Policy Gradients)
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Skim through papers suggested by Prof. Tyler and pick one to implement
+* [x] Implement Q-Learning in CartPole-v1
 ---
-## Date: Week 3 - Month Day Year 
+## Date: Week 5 - September 23 2025
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Implement RL Guided SSL paper
+    - Setup required files for the project (main.py, model.py, component/env.py, train.py, test.py, benchmark.py)
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Create the required files in respective directories
+* [x] Build a simple RL Guided SSL pipeline in a sandbox environment
 ---
-## Date: Week 4 - Month Day Year 
+## Date: Week 6 - September 30 2025
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Explore different settings for the reward and RL loss functions
+    - Experiment and document the results
+    - Raise PR for the final results and relevant codes with `main` branch
+
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Implement AdaptiveMixupGenerator: Confidence-based and entropy-based mixup ratio adjustment
+* [x] Implement AdaptiveRewardFunction: Confidence bonus, diversity bonus, mixup effectiveness bonus
+* [x] Implement AdaptiveRLLossFunction: Curriculum learning, entropy regularization
+* [x] Run the experiments on `run_experiments.py` 
+* [x] Document the results in `RLGSSL_Implementation_Documentation.md`  
+* [ ] Merge final results and relevant codes with `main` branch
+
 ---
-## Date: Week 5 - Month Day Year 
+## Date: Week 7 - October 07 2025
 - Topics of discussion
-    - Item1
-    - Item2
-    - Item3
+    - Understand and merge Aishwarya's changes with main branch
+    - Start working on the main project files (main.py, model.py, env.py, train.py, test.py)
+    - Work on PG algorithm
 
 - Action Items:
 
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
+* [x] Update folder structure after merging Aishwarya's changes
+* [x] Create a separate branch for the main project files
+* [x] Push PG algorithm changes to main branch
+
 ---
-## Date: Week 6 - Month Day Year 
-- Topics of discussion
-    - Item1
-    - Item2
-    - Item3
-
-- Action Items:
-
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
----
-## Date: Week 7 - Month Day Year 
-- Topics of discussion
-    - Item1
-    - Item2
-    - Item3
-
-- Action Items:
-
-* [ ] Action Item 1
-* [ ] Action Item 2
-* [ ] Action Item 3
-* [ ] Action Item 4
-* [ ] Action Item 5
-----
 ## Date: Week 8 - Month Day Year 
 - Topics of discussion
     - Item1
@@ -117,7 +87,6 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 * [ ] Action Item 4
 * [ ] Action Item 5
 ---
-
 ## Date: Week 9 - Month Day Year 
 - Topics of discussion
     - Item1
@@ -131,7 +100,7 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 * [ ] Action Item 3
 * [ ] Action Item 4
 * [ ] Action Item 5
----
+----
 ## Date: Week 10 - Month Day Year 
 - Topics of discussion
     - Item1
@@ -146,6 +115,7 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 * [ ] Action Item 4
 * [ ] Action Item 5
 ---
+
 ## Date: Week 11 - Month Day Year 
 - Topics of discussion
     - Item1
@@ -201,6 +171,7 @@ Note: Use Markdown Cheat Sheet download in the directory as needed.
 * [ ] Action Item 3
 * [ ] Action Item 4
 * [ ] Action Item 5
+
 ---
 - **_Add Images and Diagrams Using Excalidraw_**
   - Just draw it and then copy as png paster in the editor
