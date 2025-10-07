@@ -5,6 +5,10 @@ This script demonstrates how to use the PolicyGradient class instead of DQN
 for the pseudo-labeling task in your project.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import torch
 import numpy as np
 from model import SimpleCNN, PolicyGradient
