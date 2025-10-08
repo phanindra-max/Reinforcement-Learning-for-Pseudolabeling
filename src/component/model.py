@@ -25,24 +25,30 @@ class SimpleCNN(nn.Module):
         x = F.relu(self.fc1(x))
         return self.fc2(x)
 
-class DQN(nn.Module):
-    '''
-    A simple MLP for value function approximation
-    - Input = 11 (10 probs + 1 entropy)
-    - Output = 11 actions (labels 0–9 + skip)
-    '''
-    def __init__(self, input_dim, output_dim, hidden_dim=128):
-        super(DQN, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim)
-        )
+# -----------------------------
+# Downstream model (CNN)
+# -----------------------------
+class DownstreamModel(nn.Module):
+    """A simple two-layer CNN for MNIST classification."""
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2)
+        self.fc1 = nn.Linear(32 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x):
-        return self.net(x)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 32 * 7 * 7) # Flatten
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
-
+# -----------------------------
+# Policy Gradient Agent
+# -----------------------------
 class PolicyNetwork(nn.Module):
     '''
     Policy network for PolicyGradient
@@ -227,3 +233,22 @@ class PolicyGradient:
         self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth')))
         print(f"Models loaded from {save_dir}")
 
+# -----------------------------
+# Temp: Created while experimenting
+# -----------------------------
+class DQN(nn.Module):
+    '''
+    A simple MLP for value function approximation
+    - Input = 11 (10 probs + 1 entropy)
+    - Output = 11 actions (labels 0–9 + skip)
+    '''
+    def __init__(self, input_dim, output_dim, hidden_dim=128):
+        super(DQN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
+
+    def forward(self, x):
+        return self.net(x)
