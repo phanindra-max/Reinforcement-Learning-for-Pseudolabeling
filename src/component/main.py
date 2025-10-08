@@ -2,8 +2,7 @@ from env import PseudoLabelEnv
 from model import SimpleCNN, PolicyGradient
 from tqdm import tqdm
 import numpy as np
-import torch
-from component.utils import retrain_downstream_model, evaluate_model, ReplayBuffer, get_ssl_mnist, evaluate_model_accuracy
+
 
 
 def main(EPISODES, NUM_LABELED, NUM_UNLABELED, NUM_VALIDATION):
@@ -17,13 +16,6 @@ def main(EPISODES, NUM_LABELED, NUM_UNLABELED, NUM_VALIDATION):
 
     # 3. RL Agent
     agent = PolicyGradient(state_dim=state_dim, num_actions=action_dim)
-
-    # 4. Downstream model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SimpleCNN().to(device)
-    
-    # 5. Loading labeled and unlabeled data
-    labeled_loader, unlabeled_loader = get_ssl_mnist(labeled_size=100, unlabeled_size=2000)
 
 
     print("Starting training with PyTorch agent...")
