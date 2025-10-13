@@ -56,15 +56,15 @@ class PolicyGradient:
     '''
     
     def __init__(self, state_dim, num_actions, gamma=0.99, alpha_pi=1e-3, 
-                 alpha_v=1e-3, device='cpu', policy='mlp'):
+                 alpha_v=1e-3, device='cpu', policy='mlp', hidden_dim=64):
         self.state_dim = state_dim
         self.num_actions = num_actions
         self.gamma = gamma
         self.device = device
         
         if policy == 'mlp':
-            self.pi = PolicyNetwork(state_dim, num_actions).to(device)
-            self.v = ValueNetwork(state_dim).to(device)
+            self.pi = PolicyNetwork(state_dim, num_actions, hidden_dim=hidden_dim).to(self.device)
+            self.v = ValueNetwork(state_dim, hidden_dim=hidden_dim).to(device)
             self.optimizer_pi = torch.optim.Adam(self.pi.parameters(), lr=alpha_pi)
             self.optimizer_v = torch.optim.Adam(self.v.parameters(), lr=alpha_v)
         else:
@@ -172,7 +172,7 @@ class PolicyGradient:
         
         torch.save(self.pi.state_dict(), os.path.join(save_dir, f'{name}_policy.pth'))
         torch.save(self.v.state_dict(), os.path.join(save_dir, f'{name}_value.pth'))
-        print(f"Models saved to {save_dir}")
+        print(f"Policy gradient models saved to {save_dir}/{name}_policy.pth and {save_dir}/{name}_value.pth")
     
     def load_model(self, name='policy_gradient', save_dir=None):
         '''
