@@ -6,6 +6,7 @@ torchaudio
 # Numerical computation and data handling
 numpy
 scipy
+scikit-learn
 
 # Visualization and plotting
 matplotlib
