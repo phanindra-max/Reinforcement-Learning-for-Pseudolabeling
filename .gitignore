@@ -45,3 +45,6 @@ tmp/
 # removing data files as the size is large
 src/data
 trained_models/
+
+# Tesnorboard runs
+runs
