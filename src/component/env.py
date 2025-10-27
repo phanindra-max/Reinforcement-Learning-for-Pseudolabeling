@@ -68,8 +68,9 @@ class PseudoLabelEnv(gym.Env):
         self.downstream_model = DownstreamModel(self.device)
         self.downstream_model.train_model((self.labeled_x, self.labeled_y), [])
         self.initial_model_state = self.downstream_model.state_dict()  # Save initial weights
-        self.baseline_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
 
+        self.baseline_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
+        self.baseline_error_rate = 1.0 - self.baseline_accuracy
     # -----------------------------
     # Load Data
     # -----------------------------
@@ -126,6 +127,7 @@ class PseudoLabelEnv(gym.Env):
         super().reset(seed=seed)
         self.current_idx = 0
         self.newly_pseudo_labeled_data = []
+        self.all_pseudo_labeled_data = []
         self.episode_reward = 0.0
 
         perm = torch.randperm(self.unlabeled_x.size(0))
@@ -134,7 +136,7 @@ class PseudoLabelEnv(gym.Env):
 
         # Restore downstream model to initial weights
         self.downstream_model.load_state_dict(self.initial_model_state)
-        print("Initial (Episode-Start) Accuracy on Validation Data: ", self.baseline_accuracy)
+        print("Initial (Episode-Start) Error Rate on Validation Data: {:.2f}%".format(self.baseline_error_rate * 100))
         return self._get_state(), {}
 
     # -----------------------------
@@ -143,74 +145,91 @@ class PseudoLabelEnv(gym.Env):
     def step(self, action):
         """
         Execute one step in the environment based on the agent's action.
-        
-        Args:
-            action (int): Action to take. If action < num_classes, assign that label
-                         to current unlabeled sample. If action == num_classes, skip the sample.
-        
-        Returns:
-            tuple: (next_state, reward, terminated, truncated, info)
-                - next_state (np.ndarray): Observation of next state
-                - reward (float): Reward for the action taken
-                - terminated (bool): Whether episode has ended
-                - truncated (bool): Always False (not used)
-                - info (dict): Additional information including final accuracy if terminated
         """
         img_idx = self.current_idx
-        reward = 0
-        
+        reward = 0.0
+      
+        # Handle action (labeling or skipping)
         if action < self.num_classes:
-            true_label = self.unlabeled_y_true[img_idx]
-            preds = self.downstream_model.get_predictions(self.unlabeled_x[img_idx].unsqueeze(0))
-            pred_label = torch.argmax(preds).item()
-            reward = self.calculate_reward(pred_label, true_label, action, preds)
-            self.episode_reward += reward
-            
             self.newly_pseudo_labeled_data.append(
                 (self.unlabeled_x[img_idx], torch.tensor(action, device=self.device))
-            )
-
+            )            
         else:  # Action is skip (action == num_classes)
-            reward = self.calculate_reward(None, None, action, None)
+            reward = self.calculate_reward(0.0, 0.0, skip_penalty=True)
 
+        if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 32)):
+          
+            # Store the baseline error rate for comparison
+            old_error_rate = self.baseline_error_rate
+          
+            # Reset the model to the initial state (trained only on labeled data)
+            self.downstream_model.load_state_dict(self.initial_model_state)
+          
+            # Train the model: Labeled data + CURRENT batch of pseudo-labels
+            self.downstream_model.train_model(
+                (self.labeled_x, self.labeled_y),
+                self.newly_pseudo_labeled_data
+            )
+          
+            # Evaluate new error rate
+            new_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
+            new_error_rate = 1.0 - new_accuracy
+          
+            # Use separate method to calculate reward
+            reward += self.calculate_reward(old_error_rate, new_error_rate)
+          
+            # Move current batch to all_pseudo_labeled_data
+            self.all_pseudo_labeled_data.extend(self.newly_pseudo_labeled_data)
+            # Clear the buffer for the next batch
+            self.newly_pseudo_labeled_data = []
+
+        self.episode_reward += reward
         self.current_idx += 1
         terminated = (self.current_idx >= len(self.unlabeled_x))
         info = {}
-        
+      
         if terminated:
-            self.downstream_model.train_model((self.labeled_x, self.labeled_y), self.newly_pseudo_labeled_data)
+            # 1. Reset model to the baseline state
+            self.downstream_model.load_state_dict(self.initial_model_state)
+          
+            # 2. Train the model on the ENTIRE set of pseudo-labels collected in the episode
+            if self.all_pseudo_labeled_data:
+                self.downstream_model.train_model(
+                    (self.labeled_x, self.labeled_y),
+                    self.all_pseudo_labeled_data
+                )
+            # 3. Evaluate and report final metrics
             new_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
+            new_error_rate = 1.0 - new_accuracy
+          
             info['new_accuracy'] = new_accuracy
-            info['error_rate'] = 1 - new_accuracy
-            
-            accuracy_bonus = new_accuracy - self.baseline_accuracy
-            reward += accuracy_bonus
-            info['final_reward'] = self.episode_reward + accuracy_bonus
+            info['error_rate'] = new_error_rate
+            info['final_reward'] = self.episode_reward
+          
+            print(f"Episode Terminated. Final Error Rate: {new_error_rate*100:.4f}%.")
         
         next_state = self._get_state()
         return next_state, reward, terminated, False, info
-
+    
     # -----------------------------
     # Reward function
     # -----------------------------
-    def calculate_reward(self, pred_label, true_label, action, probs):
+    def calculate_reward(self, old_error_rate, new_error_rate, skip_penalty=False):
         """
-        Calculate reward for the action taken on current unlabeled sample.
+        Calculate reward based on error rate reduction.
         
         Args:
-            pred_label (int, optional): Model's predicted label for the sample
-            true_label (int, optional): True label of the sample
-            action (int): Action taken by agent (label assignment or skip)
-            probs (torch.Tensor, optional): Probability distribution over classes
+            old_error_rate (float): Error rate before training with new pseudo-labels
+            new_error_rate (float): Error rate after training with new pseudo-labels
+            skip_penalty (bool): Whether to apply small penalty for skipping (default: False)
         
         Returns:
-            float: Reward value. For skip action, returns -0.1. For labeling action,
-                   returns +confidence if correct, -confidence if incorrect.
+            float: Reward value
         """
-        if action == self.num_classes:
-            return -0.1  # Penalty for skipping
-        confidence = probs[action].item()
-        return confidence if action == true_label else -confidence
+        reward = old_error_rate - new_error_rate
+        if skip_penalty:
+            reward -= 0.01  # Small penalty for skipping
+        return reward
     
 
     # -----------------------------

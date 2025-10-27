@@ -31,8 +31,8 @@ def main():
         device=env.device
     )
 
-    # Initialize best accuracy tracking
-    best_accuracy = float('-inf')
+    # Initialize best error rate tracking
+    best_error_rate = float('inf')
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
@@ -64,18 +64,25 @@ def main():
         # Log results from the info dict and episode metrics
         episode_reward = sum(sampled_rewards)  # Sum of step rewards
         if 'final_reward' in info:
-            episode_reward += info['new_accuracy'] - env.baseline_accuracy  # Include accuracy bonus
-            writer.add_scalar("Reward/Final", info['final_reward'], episode)
-            writer.add_scalar("Accuracy/New", info['new_accuracy']*100, episode)
-            writer.add_scalar("Error Rate", info['error_rate']*100, episode)
-            print(f"Episode {episode+1}: Final Reward = {info['final_reward']:.4f}, "
-                  f"New Accuracy = {info['new_accuracy']*100:.4f}, Error Rate = {info['error_rate']*100:.4f}, "
+            final_reward = info['final_reward']
+            new_accuracy = info['new_accuracy']
+            error_rate = info['error_rate']
+            
+            writer.add_scalar("Reward/Final", final_reward, episode)
+            # Log the sum of the trajectory rewards for comparison
+            writer.add_scalar("Reward/Episode", sum(sampled_rewards), episode)
+            
+            writer.add_scalar("Accuracy/New", new_accuracy*100, episode)
+            writer.add_scalar("Error Rate", error_rate*100, episode)
+            
+            print(f"Episode {episode+1}: Final Reward = {final_reward:.4f}, "
+                  f"New Accuracy = {new_accuracy*100:.4f}, Error Rate = {error_rate*100:.4f}, "
                   f"Policy Loss = {policy_loss:.4f}, Value Loss = {value_loss:.4f}\n")
         
-            # Check if this is the best accuracy
-            if info['new_accuracy'] > best_accuracy:
-                best_accuracy = info['new_accuracy']
-                print(f"New best accuracy: {best_accuracy*100:.4f}% - Saving models...")
+            # Check if this is the best error rate
+            if error_rate < best_error_rate:
+                best_error_rate = error_rate
+                print(f"New best error rate: {best_error_rate*100:.4f}% - Saving models...")
                 # Save downstream model
                 env.downstream_model.save_model(name='best_downstream', save_dir=save_dir)
                 # Save policy gradient models
@@ -84,11 +91,10 @@ def main():
         # Log policy and value losses
         writer.add_scalar("Loss/Policy", policy_loss, episode)
         writer.add_scalar("Loss/Value", value_loss, episode)
-        writer.add_scalar("Reward/Episode", episode_reward, episode)
 
     env.close()
     writer.close()  # Close the TensorBoard writer
-    print(f"Training finished. Best accuracy achieved: {best_accuracy*100:.4f}%")
+    print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
 
 if __name__ == "__main__":
