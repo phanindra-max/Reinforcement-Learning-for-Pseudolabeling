@@ -1,0 +1,182 @@
+\documentclass{beamer}
+
+% Theme and color
+\usetheme{Madrid}
+%\usetheme{Pittsburgh}
+\usefonttheme{serif}
+%\usecolortheme{default}
+\usecolortheme{seahorse}
+\setbeamertemplate{itemize items}[ball]
+
+% Addtional Packages
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Styling python code globally
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    backgroundcolor=\color{white},   
+    commentstyle=\color{green!40!black},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{gray},
+    stringstyle=\color{purple!60!black},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=pythonstyle} 
+
+% Title details
+\title{Reinforcement Learning for Pseudo-Labeling}
+\subtitle{Capstone Project Presentation}
+\author{
+  Group-11 \\
+  \vspace{0.3cm}
+  \textbf{Students:} Aishwarya Maddula, Deepika Reddygari, Phanindra Kalaga, Prudhvi Chekuri  \\
+  \vspace{0.3cm}
+  \textbf{Guided by:} Proff. Amir Jafari, Proff. Tyler Wallet
+}
+\institute{George Washington University}
+\date{\today}
+
+\begin{document}
+
+% Title Slide
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% Outline
+\begin{frame}{Outline}
+  \tableofcontents
+\end{frame}
+
+% Section 1
+\section{Introduction}
+\begin{frame}{Introduction}
+  \begin{itemize}
+    \item \textbf{Problem:} Semi-supervised learning is valuable when labeled data is limited, but manually labeling large datasets is time-consuming and costly.
+    \item \textbf{Challenge:} Traditional pseudo-labeling heuristics may propagate errors from mislabeled data, leading to reduced model performance.
+    \item \textbf{Idea:} Apply Reinforcement Learning (RL) to develop an adaptive pseudo-labeling strategy that selects informative examples, balances risk and reward, and improves model accuracy while reducing labeling errors.
+  \end{itemize}
+\end{frame}
+
+% Background Section
+\section{Background and Literature Review}
+\begin{frame}{Background and Literature Review}
+    \begin{itemize}
+        \item Reinforcement Learning offers a dynamic and adaptive approach to pseudo-labeling, potentially overcoming the limitations of static, heuristic-based methods.
+        \item With limited prior experience in RL frameworks, our team initiated a foundational learning phase by implementing starter examples from the Gymnasium library.
+        \item To build a strong research context, we subsequently implemented and analyzed five key publications relevant to RL-based pseudo-labeling before developing our own model.
+    \end{itemize}
+\end{frame}
+
+
+% Section 2
+\section{Project Setup}
+\begin{frame}{Code Files}
+  \begin{itemize}
+    \item \textbf{main.py}: Entry point for training process.
+    \item \textbf{env.py}: Custom RL environment handling pseudo-labeling episodes.
+    \item \textbf{model.py}: Defines feature extractor and classifier.
+    \item \textbf{utils.py}: Helper functions for data loading, metrics, etc.
+  \end{itemize}
+\end{frame}
+
+% Section 3
+\section{Reinforcement Learning Framework}
+\begin{frame}{MDP Formulation}
+  \begin{block}{State}
+    Image features, model predictions, entropy (uncertainty).
+  \end{block}
+  \begin{block}{Action}
+    Assign pseudo-label or skip.
+  \end{block}
+  \begin{block}{Reward}
+    Positive for correct pseudo-labels, penalty for wrong ones.
+  \end{block}
+\end{frame}
+
+% Section 4
+\section{Training Flow}
+\begin{frame}{Workflow}
+  \begin{enumerate}
+    \item Load labeled and unlabeled MNIST data.
+    \item Extract features with CNN.
+    \item RL agent selects pseudo-label actions.
+    \item Retrain classifier with newly labeled data.
+  \end{enumerate}
+\end{frame}
+
+% NEW: Implementation Details Section
+\section{Implementation Details}
+\begin{frame}[fragile]{env.reset()}
+
+    \begin{itemize}
+      \item Following is the code for env.reset():
+        \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont,firstline=67, lastline=79]{RLPL/env.py}
+      \item Above fucntion is called in main.py as:
+      \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=12, lastline=12]{RLPL/main.py}
+
+
+    \end{itemize}
+    
+    
+
+    Above function is called in main.py as:
+    
+
+
+\end{frame}
+
+\begin{frame}{model.policy()}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=73, lastline=88]{RLPL/model.py}
+\end{frame}
+
+\begin{frame}{env.step()}
+    \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=84, lastline=111]{RLPL/env.py}
+\end{frame}
+
+\begin{frame}{model.update()}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=124, lastline=149]{RLPL/model.py}
+\end{frame}
+
+\begin{frame}{main.py (Bringing everything together)}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=6, lastline=28]{RLPL/main.py}
+\end{frame}
+
+
+% Section 5
+\section{Results and Insights}
+\begin{frame}{Observations}
+  \begin{itemize}
+    \item RL policy learns to prefer high-confidence samples.
+    \item Entropy and softmax probabilities guide state representation.
+    \item Caveat: Reward shaping has big impact on stability.
+  \end{itemize}
+\end{frame}
+
+% Section 6
+\section{Conclusion}
+\begin{frame}{Conclusion}
+  \begin{itemize}
+    \item Demonstrated feasibility of RL-based pseudo-labeling.
+    \item Compared to naive pseudo-labeling, RL improves selection.
+    \item Future work: extend to larger datasets and test other RL algorithms.
+  \end{itemize}
+\end{frame}
+
+% Final
+\begin{frame}{Thank You}
+  Questions?
+\end{frame}
+
+\end{document}

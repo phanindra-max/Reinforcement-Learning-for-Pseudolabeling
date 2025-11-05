@@ -1,6 +1,12 @@
 """
 RLGSSL Demo Script
 Quick demonstration of the implemented RLGSSL method
+
+TensorBoard Integration:
+  This script automatically logs metrics to TensorBoard.
+  To view real-time training metrics, run in a separate terminal:
+    tensorboard --logdir=experiments/demo_run/tensorboard
+  Then open http://localhost:6006/ in your browser.
 """
 
 import torch
@@ -133,7 +139,7 @@ def test_components_individually():
         print("2. Testing model creation...")
         from models.networks import create_model
         
-        model = create_model('cnn13', num_classes=10)
+        model = create_model('cnn13', num_classes=10).to(device)
         test_input = torch.randn(2, 3, 32, 32).to(device)
         output = model.get_probabilities(test_input)
         assert output.shape == (2, 10), f"Expected (2, 10), got {output.shape}"
@@ -209,6 +215,10 @@ def test_components_individually():
 
 
 if __name__ == "__main__":
+    import json
+    from datetime import datetime
+    import os
+    
     print("Starting RLGSSL Implementation Demo\n")
     
     # Test individual components first
@@ -221,6 +231,22 @@ if __name__ == "__main__":
         
         # Run minimal demo
         demo_results = run_minimal_demo()
+        
+        # Save demo results to file
+        demo_log_dir = os.path.join('experiments', 'demo_results')
+        os.makedirs(demo_log_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        demo_log_file = os.path.join(demo_log_dir, f'demo_results_{timestamp}.json')
+        
+        with open(demo_log_file, 'w') as f:
+            json.dump({
+                'timestamp': timestamp,
+                'components_test': 'passed' if components_ok else 'failed',
+                'demo_results': demo_results
+            }, f, indent=2)
+        
+        print(f"\nDemo results saved to: {demo_log_file}")
         
         if demo_results['status'] == 'success':
             print("\n🎉 RLGSSL implementation is working correctly!")

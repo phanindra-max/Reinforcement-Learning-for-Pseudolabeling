@@ -13,6 +13,7 @@ import os
 from typing import Dict, Any, Optional, Tuple
 import json
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 # Import our custom modules
 from data.ssl_datasets import create_ssl_dataloaders
@@ -60,6 +61,7 @@ class RLGSSLConfig:
         self.eval_frequency = 10
         self.save_frequency = 50
         self.log_frequency = 10
+        self.use_tensorboard = True  # Enable TensorBoard logging
         
         # Device settings
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -231,6 +233,15 @@ class RLGSSLTrainer:
         self.training_logs = []
         self.best_accuracy = 0.0
         self.best_epoch = 0
+        
+        # Initialize TensorBoard
+        if self.config.use_tensorboard:
+            tensorboard_dir = os.path.join(self.experiment_dir, 'tensorboard')
+            self.writer = SummaryWriter(log_dir=tensorboard_dir)
+            print(f"TensorBoard logging enabled: {tensorboard_dir}")
+            print(f"  View with: tensorboard --logdir={tensorboard_dir}")
+        else:
+            self.writer = None
     
     def warmup_phase(self):
         """Warmup training with standard teacher-student framework"""
@@ -251,6 +262,11 @@ class RLGSSLTrainer:
         warmup_results = self.framework.evaluate(self.test_loader)
         print(f"Warmup Results - Student Accuracy: {warmup_results['student_accuracy']:.2f}%")
         print(f"Warmup Results - Teacher Accuracy: {warmup_results['teacher_accuracy']:.2f}%")
+        
+        # Log to TensorBoard
+        if self.writer is not None:
+            self.writer.add_scalar('Warmup/Student_Accuracy', warmup_results['student_accuracy'], self.config.warmup_epochs)
+            self.writer.add_scalar('Warmup/Teacher_Accuracy', warmup_results['teacher_accuracy'], self.config.warmup_epochs)
         
         return warmup_results
     
@@ -442,6 +458,30 @@ class RLGSSLTrainer:
                 
                 self.training_logs.append(log_entry)
                 
+                # Log to TensorBoard
+                if self.writer is not None:
+                    # Loss metrics
+                    self.writer.add_scalar('Loss/Total', epoch_losses['total_loss'], epoch + 1)
+                    self.writer.add_scalar('Loss/RL_Loss', epoch_losses['rl_loss'], epoch + 1)
+                    self.writer.add_scalar('Loss/Supervised', epoch_losses['supervised_loss'], epoch + 1)
+                    self.writer.add_scalar('Loss/Consistency', epoch_losses['consistency_loss'], epoch + 1)
+                    
+                    # Reward
+                    self.writer.add_scalar('RL/Reward', epoch_losses['reward'], epoch + 1)
+                    
+                    # Accuracy
+                    self.writer.add_scalar('Accuracy/Student', eval_results['student_accuracy'], epoch + 1)
+                    self.writer.add_scalar('Accuracy/Teacher', eval_results['teacher_accuracy'], epoch + 1)
+                    self.writer.add_scalar('Accuracy/Best', self.best_accuracy, epoch + 1)
+                    
+                    # Training info
+                    self.writer.add_scalar('Training/Learning_Rate', self.scheduler.get_last_lr()[0], epoch + 1)
+                    self.writer.add_scalar('Training/Epoch_Time', time.time() - epoch_start_time, epoch + 1)
+                    
+                    # If using adaptive RL, log confidence ratio
+                    if 'confidence_ratio' in epoch_losses:
+                        self.writer.add_scalar('RL/Confidence_Ratio', epoch_losses.get('confidence_ratio', 0), epoch + 1)
+                
                 # Print progress
                 print(f"Epoch {epoch+1}: "
                       f"Loss={epoch_losses['total_loss']:.4f}, "
@@ -495,14 +535,23 @@ class RLGSSLTrainer:
             with open(summary_path, 'w') as f:
                 json.dump(final_summary, f, indent=2, default=str)
             
+            # Close TensorBoard writer
+            if self.writer is not None:
+                self.writer.close()
+                print("TensorBoard logs saved")
+            
             return final_summary
             
         except KeyboardInterrupt:
             print("\nTraining interrupted by user")
             self.save_checkpoint('interrupted_checkpoint.pth', -1)
+            if self.writer is not None:
+                self.writer.close()
             return None
         except Exception as e:
             print(f"\nTraining failed with error: {e}")
+            if self.writer is not None:
+                self.writer.close()
             raise e
     
     def save_checkpoint(self, filename: str, epoch: int, eval_results: Optional[Dict] = None):

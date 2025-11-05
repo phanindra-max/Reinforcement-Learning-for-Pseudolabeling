@@ -1,6 +1,15 @@
 """
 Experiment Runner for RLGSSL
 Reproduces the experimental setup from the paper
+
+TensorBoard Integration:
+  All experiments automatically log metrics to TensorBoard.
+  To view training metrics, run in a separate terminal:
+    tensorboard --logdir=experiments
+  Then open http://localhost:6006/ in your browser.
+  
+  For specific experiment:
+    tensorboard --logdir=experiments/{experiment_name}/tensorboard
 """
 
 import argparse
@@ -68,6 +77,9 @@ def run_single_experiment(config: RLGSSLConfig, experiment_id: str):
     print(f"Dataset: {config.dataset_name}, Architecture: {config.architecture}")
     print(f"Labeled samples: {config.num_labeled}")
     print(f"{'='*80}")
+    print(f"\n💡 TensorBoard Tip: Monitor training in real-time!")
+    print(f"   Run: tensorboard --logdir=experiments")
+    print(f"   Open: http://localhost:6006/\n")
     
     try:
         # Create trainer
