@@ -29,10 +29,14 @@ def run_minimal_demo():
     config.num_labeled = 1000
     config.architecture = 'cnn13'
     config.batch_size = 64  # Smaller batch size for demo
-    config.warmup_epochs = 2  # Very short for demo
-    config.rlgssl_epochs = 3   # Very short for demo
-    config.eval_frequency = 1  # Evaluate every epoch
+    config.warmup_epochs = 10  # Reduced from paper's 50 for demo
+    config.rlgssl_epochs = 20   # Reduced from paper's 400 for demo
+    config.eval_frequency = 5  # Evaluate every 5 epochs
     config.experiment_name = 'demo_run'
+    
+    # Keep paper's hyperparameters
+    config.lambda_sup = 0.1  # Paper value
+    config.lambda_cons = 0.1  # Paper value
     
     print(f"Configuration:")
     print(f"  Dataset: {config.dataset_name}")

@@ -46,9 +46,9 @@ class RLGSSLConfig:
         self.rlgssl_epochs = 400
         self.total_epochs = self.warmup_epochs + self.rlgssl_epochs
         
-        # RLGSSL hyperparameters (from paper)
-        self.lambda_sup = 0.1
-        self.lambda_cons = 0.1
+        # RLGSSL hyperparameters (from paper Section 4.1)
+        self.lambda_sup = 1.0  # λ₁ in the paper - FIXED: increased from 0.1
+        self.lambda_cons = 1.0  # λ₂ in the paper - FIXED: increased from 0.1
         self.ema_decay = 0.999
         self.mixup_alpha = 1.0
         

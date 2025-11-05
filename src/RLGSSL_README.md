@@ -197,7 +197,7 @@ The implementation follows Algorithm 1 from the paper:
 
 ```bash
 # Run all paper experiments (WARNING: Takes days!)
-python run_experiments.py --mode paper
+python3 run_experiments.py --mode paper
 
 # Run specific configuration
 python run_experiments.py --mode single \

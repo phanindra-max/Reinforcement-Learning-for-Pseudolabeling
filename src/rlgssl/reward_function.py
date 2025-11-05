@@ -34,6 +34,8 @@ class RLRewardFunction:
     ) -> torch.Tensor:
         """
         Compute reward based on model predictions on mixup data
+        From RLGSSL paper (Section 3.1.1):
+        R(s,a;sg[θ]) = -1/(C·N^m) * Σ ||P_θ(x_i^m) - y_i^m||_2^2
         
         Args:
             model: The model to evaluate (policy network)
@@ -42,7 +44,7 @@ class RLRewardFunction:
             stop_gradient: Whether to stop gradients through the model (sg[θ])
         
         Returns:
-            Reward value (scalar tensor)
+            Reward value (scalar tensor) - NEGATIVE MSE (≤ 0, closer to 0 is better)
         """
         # Get model predictions on mixup data
         if stop_gradient:
@@ -51,8 +53,13 @@ class RLRewardFunction:
         else:
             model_predictions = model.get_probabilities(mixup_data)
         
-        # Compute negative MSE as reward
+        # Compute MSE: 1/(C·N^m) * Σ ||P_θ(x_i^m) - y_i^m||_2^2
+        # F.mse_loss with reduction='mean' computes: (1/N) * Σ (1/C) * Σ (pred - label)^2
+        # which equals 1/(C·N) * Σ ||pred - label||_2^2
         mse = F.mse_loss(model_predictions, mixup_labels, reduction='mean')
+        
+        # Return negative MSE as reward (paper equation 3)
+        # Reward is ≤ 0, with 0 being perfect prediction
         reward = -mse
         
         return reward
@@ -87,6 +94,9 @@ class RLRewardFunction:
         mse = F.mse_loss(model_predictions, mixup_labels, reduction='mean')
         per_sample_mse = F.mse_loss(model_predictions, mixup_labels, reduction='none').mean(dim=1)
         
+        # Reward: -MSE (paper equation 3)
+        reward = -mse
+        
         # L1 loss (alternative metric)
         l1_loss = F.l1_loss(model_predictions, mixup_labels, reduction='mean')
         
@@ -102,7 +112,7 @@ class RLRewardFunction:
         label_confidence = torch.max(mixup_labels, dim=1)[0].mean()
         
         return {
-            'reward': -mse,
+            'reward': reward,
             'mse': mse,
             'per_sample_mse': per_sample_mse,
             'l1_loss': l1_loss,
@@ -136,7 +146,7 @@ class RLRewardFunction:
             stop_gradient: Whether to stop gradients
         
         Returns:
-            Per-sample rewards [N^m]
+            Per-sample rewards [N^m] - NEGATIVE MSE per sample (≤ 0)
         """
         if batch_size is None or mixup_data.size(0) <= batch_size:
             # Process all at once
@@ -146,10 +156,13 @@ class RLRewardFunction:
             else:
                 model_predictions = model.get_probabilities(mixup_data)
             
-            # Per-sample MSE (negative for reward)
-            per_sample_rewards = -F.mse_loss(
+            # Per-sample MSE
+            per_sample_mse = F.mse_loss(
                 model_predictions, mixup_labels, reduction='none'
             ).mean(dim=1)
+            
+            # Negative MSE as reward
+            per_sample_rewards = -per_sample_mse
             
             return per_sample_rewards
         
@@ -169,9 +182,11 @@ class RLRewardFunction:
                 else:
                     batch_predictions = model.get_probabilities(batch_data)
                 
-                batch_rewards = -F.mse_loss(
+                batch_mse = F.mse_loss(
                     batch_predictions, batch_labels, reduction='none'
                 ).mean(dim=1)
+                
+                batch_rewards = -batch_mse
                 
                 all_rewards.append(batch_rewards)
             
@@ -321,8 +336,8 @@ def test_reward_function():
     # Test detailed reward
     detailed_reward = reward_fn.compute_detailed_reward(model, mixup_data, mixup_labels)
     print(f"Detailed reward keys: {list(detailed_reward.keys())}")
-    print(f"MSE: {detailed_reward['mse'].item():.6f}")
-    print(f"KL divergence: {detailed_reward['kl_divergence'].item():.6f}")
+    print(f"MSE: {detailed_reward['mse'].item()::.6f}")
+    print(f"KL divergence: {detailed_reward['kl_divergence'].item()::.6f}")
     
     # Test batch rewards
     batch_rewards = reward_fn.compute_batch_rewards(model, mixup_data, mixup_labels)

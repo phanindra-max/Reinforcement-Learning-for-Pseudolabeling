@@ -90,8 +90,19 @@ class RLLossFunction:
         reduction: str = 'mean'
     ) -> Dict[str, torch.Tensor]:
         """
-        Compute RL loss
-        L_rl = -E[y_i^u ~ π_θ] KL(e, y_i^u) * R(s,a;sg[θ])
+        Compute RL loss from RLGSSL paper (Section 3.1.2):
+        L_rl = E[y_i^u ~ π_θ] KL(e, y_i^u) * (-R(s,a;sg[θ]))
+        
+        where:
+        - π_θ is the policy (student model)
+        - e is uniform distribution
+        - R is the reward (negative MSE, ≤ 0)
+        - sg[·] is stop gradient
+        - We use (-R) to convert negative reward to positive loss for minimization
+        
+        Interpretation:
+        - When reward is close to 0 (good), -R ≈ 0, so loss ≈ 0 (good for minimization)
+        - When reward is very negative (bad), -R is large positive, so loss is large (bad)
         
         Args:
             model: Policy network (student model)
@@ -103,25 +114,28 @@ class RLLossFunction:
         Returns:
             Dictionary containing loss components
         """
-        # Get pseudo-labels (actions) from unlabeled data
-        pseudo_labels = model.get_probabilities(unlabeled_data)  # π_θ(a|s)
+        # Get pseudo-labels (actions) from unlabeled data: y_i^u ~ π_θ
+        pseudo_labels = model.get_probabilities(unlabeled_data)
         
-        # Compute reward on mixup data (with stop gradient)
+        # Compute reward on mixup data (with stop gradient): R(s,a;sg[θ])
+        # Reward is negative MSE: ≤ 0, with 0 being perfect
         reward = self.reward_function.compute_reward(
             model, mixup_data, mixup_labels, stop_gradient=True
         )
         
-        # Compute KL divergence weights
+        # Compute KL divergence weights: KL(e, y_i^u)
+        # This encourages predictions to be discriminative (far from uniform)
         kl_weights = self.compute_kl_weight(pseudo_labels)
         
-        # RL loss: -E[KL(e, y_i^u) * R(s,a;sg[θ])]
-        # Note: We compute per-sample loss and then reduce
+        # RL loss: E[KL(e, y_i^u) * (-R(s,a;sg[θ]))]
+        # Convert negative reward to positive loss: -R
+        # FIXED: Removed the extra negative sign that was inverting the optimization
         if reduction == 'mean':
-            weighted_loss = -kl_weights.mean() * reward
+            weighted_loss = kl_weights.mean() * (-reward)
         elif reduction == 'sum':
-            weighted_loss = -kl_weights.sum() * reward
+            weighted_loss = kl_weights.sum() * (-reward)
         elif reduction == 'none':
-            weighted_loss = -kl_weights * reward
+            weighted_loss = kl_weights * (-reward)
         else:
             raise ValueError(f"Invalid reduction: {reduction}")
         
