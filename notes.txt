@@ -1,5 +1,0 @@
-- batch size at top in main.py
-- epochs in train_model
-- move downstream training from init to reset
-- vpg/ppo and downstream save weights on best case observed
- 

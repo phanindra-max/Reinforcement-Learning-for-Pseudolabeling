@@ -200,7 +200,7 @@ def main():
     parser = argparse.ArgumentParser(description='RLGSSL Experiment Runner')
     parser.add_argument('--mode', choices=['paper', 'quick', 'single'], default='single',
                         help='Experiment mode: paper (full reproduction), quick (fast test), single (custom)')
-    parser.add_argument('--dataset', choices=['cifar10', 'cifar100', 'svhn'], default='cifar10',
+    parser.add_argument('--dataset', choices=['cifar10', 'cifar100', 'svhn', 'mnist'], default='cifar10',
                         help='Dataset for single experiment')
     parser.add_argument('--architecture', choices=['cnn13', 'wrn28'], default='cnn13',
                         help='Architecture for single experiment')

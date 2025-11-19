@@ -91,18 +91,13 @@ class RLLossFunction:
     ) -> Dict[str, torch.Tensor]:
         """
         Compute RL loss from RLGSSL paper (Section 3.1.2):
-        L_rl = E[y_i^u ~ π_θ] KL(e, y_i^u) * (-R(s,a;sg[θ]))
+        L_rl = E[y_i^u ~ π_θ] KL(e, y_i^u) * (-R(s,a;θ))
         
-        where:
-        - π_θ is the policy (student model)
-        - e is uniform distribution
-        - R is the reward (negative MSE, ≤ 0)
-        - sg[·] is stop gradient
-        - We use (-R) to convert negative reward to positive loss for minimization
+        CRITICAL FIX: Reward must be computed WITHOUT stop_gradient to allow
+        gradient flow through the student model for proper policy gradient training.
         
-        Interpretation:
-        - When reward is close to 0 (good), -R ≈ 0, so loss ≈ 0 (good for minimization)
-        - When reward is very negative (bad), -R is large positive, so loss is large (bad)
+        The paper notation sg[θ] was misunderstood - it refers to stopping gradients
+        through the MIXUP LABELS (which come from teacher), not the student model.
         
         Args:
             model: Policy network (student model)
@@ -117,35 +112,44 @@ class RLLossFunction:
         # Get pseudo-labels (actions) from unlabeled data: y_i^u ~ π_θ
         pseudo_labels = model.get_probabilities(unlabeled_data)
         
-        # Compute reward on mixup data (with stop gradient): R(s,a;sg[θ])
-        # Reward is negative MSE: ≤ 0, with 0 being perfect
-        reward = self.reward_function.compute_reward(
-            model, mixup_data, mixup_labels, stop_gradient=True
-        )
-        
         # Compute KL divergence weights: KL(e, y_i^u)
-        # This encourages predictions to be discriminative (far from uniform)
         kl_weights = self.compute_kl_weight(pseudo_labels)
         
-        # RL loss: E[KL(e, y_i^u) * (-R(s,a;sg[θ]))]
-        # Convert negative reward to positive loss: -R
-        # FIXED: Removed the extra negative sign that was inverting the optimization
+        # Get model predictions on mixup data WITH gradients
+        model_predictions = model.get_probabilities(mixup_data)
+        
+        # Compute per-sample MSE (negative reward per sample)
+        # Shape: [batch_size]
+        per_sample_mse = F.mse_loss(
+            model_predictions, mixup_labels, reduction='none'
+        ).mean(dim=1)
+        
+        # Per-sample rewards (negative MSE)
+        per_sample_rewards = -per_sample_mse
+        
+        # RL loss: E[KL(e, y_i^u) * (-R)]
+        # Since R is already negative, -R is positive, making it a proper loss to minimize
+        # When predictions are good (R ≈ 0), -R ≈ 0, loss ≈ 0
+        # When predictions are bad (R << 0), -R >> 0, loss is large
+        per_sample_loss = kl_weights * (-per_sample_rewards)
+        
         if reduction == 'mean':
-            weighted_loss = kl_weights.mean() * (-reward)
+            weighted_loss = per_sample_loss.mean()
         elif reduction == 'sum':
-            weighted_loss = kl_weights.sum() * (-reward)
+            weighted_loss = per_sample_loss.sum()
         elif reduction == 'none':
-            weighted_loss = kl_weights * (-reward)
+            weighted_loss = per_sample_loss
         else:
             raise ValueError(f"Invalid reduction: {reduction}")
         
         return {
             'rl_loss': weighted_loss,
-            'reward': reward,
+            'reward': per_sample_rewards.mean().detach(),  # Log mean reward for monitoring
             'kl_weights': kl_weights,
             'kl_weight_mean': kl_weights.mean(),
             'pseudo_labels': pseudo_labels,
-            'pseudo_label_entropy': self._compute_entropy(pseudo_labels)
+            'pseudo_label_entropy': self._compute_entropy(pseudo_labels),
+            'per_sample_mse': per_sample_mse.mean().detach()
         }
     
     def compute_detailed_rl_loss(

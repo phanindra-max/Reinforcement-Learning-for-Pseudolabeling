@@ -28,7 +28,7 @@ class SSLDatasetSplitter:
         
     def _get_num_classes(self) -> int:
         """Get number of classes for each dataset"""
-        if self.dataset_name == 'cifar10' or self.dataset_name == 'svhn':
+        if self.dataset_name == 'cifar10' or self.dataset_name == 'svhn' or self.dataset_name == 'mnist':
             return 10
         elif self.dataset_name == 'cifar100':
             return 100
@@ -138,6 +138,20 @@ class SSLTransforms:
                     transforms.ToTensor(),
                     transforms.Normalize((0.4377, 0.4438, 0.4728), (0.1980, 0.2010, 0.1970))
                 ])
+        
+        elif self.dataset_name == 'mnist':
+            if self.is_training:
+                return transforms.Compose([
+                    transforms.RandomRotation(degrees=10),
+                    transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))
+                ])
+            else:
+                return transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))
+                ])
     
     def get_strong_transform(self):
         """Strong augmentation - more aggressive transforms for consistency training"""
@@ -240,6 +254,14 @@ def create_ssl_dataloaders(
         )
         test_dataset = torchvision.datasets.SVHN(
             root=data_root, split='test', download=True, transform=test_transform
+        )
+    
+    elif dataset_name.lower() == 'mnist':
+        train_dataset = torchvision.datasets.MNIST(
+            root=data_root, train=True, download=True, transform=None
+        )
+        test_dataset = torchvision.datasets.MNIST(
+            root=data_root, train=False, download=True, transform=test_transform
         )
     
     else:

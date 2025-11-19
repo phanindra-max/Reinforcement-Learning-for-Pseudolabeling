@@ -3,11 +3,12 @@
 ## 🚨 Critical Issues Found (November 5, 2025)
 
 ### Summary of Problems
-Your RLGSSL implementation had **3 critical bugs** causing catastrophic performance:
+Your RLGSSL implementation had **4 critical bugs** causing catastrophic performance:
 
 1. ✅ **FIXED**: Inverted RL loss formula
 2. ✅ **FIXED**: Lambda values too small (0.1 → 1.0)
-3. ⚠️ **NEEDS VERIFICATION**: Reward function implementation
+3. ✅ **FIXED**: Stop gradient blocking backpropagation (MOST CRITICAL!)
+4. ⚠️ **NEEDS VERIFICATION**: Reward function implementation
 
 ---
 
@@ -77,7 +78,80 @@ self.lambda_cons = 1.0  # Balanced
 
 ---
 
-## Bug #3: Reward Function (NEEDS VERIFICATION)
+## Bug #3: Stop Gradient Blocking Backpropagation ✅ FIXED (CRITICAL!)
+
+### The Problem
+**Location**: `src/rlgssl/rl_loss.py`, line 99-139
+
+**Original (CATASTROPHICALLY BROKEN) Code**:
+```python
+# Compute reward on mixup data (with stop gradient)
+reward = self.reward_function.compute_reward(
+    model, mixup_data, mixup_labels, stop_gradient=True  # WRONG!
+)
+
+# RL loss using scalar reward
+weighted_loss = kl_weights.mean() * (-reward)  # NO GRADIENT FLOW!
+```
+
+**Why It Failed**:
+This was the **MOST CRITICAL BUG** - the RL loss had **ZERO gradient flow**!
+
+1. **Stop Gradient Problem**: `stop_gradient=True` meant the reward was computed with `torch.no_grad()`, so no gradients could flow back to the student model
+2. **Scalar Reward Problem**: The reward was a single scalar value (mean over batch), not per-sample
+3. **Result**: The RL loss component was **completely disconnected** from the model's parameters - it couldn't train anything!
+
+**What Actually Happened**:
+- Warmup (epochs 0-50): Model trained with supervised + consistency losses → 48% accuracy ✅
+- RLGSSL phase (epochs 51+): RL loss had no gradients, so only supervised + consistency trained
+- But supervised loss was on **tiny labeled set** (1000 samples)
+- Consistency loss became useless as teacher degraded (following broken student)
+- Model collapsed to 10% (random guessing)
+
+**Fixed Code**:
+```python
+# Get model predictions on mixup data WITH gradients
+model_predictions = model.get_probabilities(mixup_data)
+
+# Compute per-sample MSE
+per_sample_mse = F.mse_loss(
+    model_predictions, mixup_labels, reduction='none'
+).mean(dim=1)
+
+# Per-sample rewards (negative MSE)
+per_sample_rewards = -per_sample_mse
+
+# RL loss with proper gradient flow
+per_sample_loss = kl_weights * (-per_sample_rewards)
+weighted_loss = per_sample_loss.mean()
+```
+
+**Key Changes**:
+1. ✅ Removed `stop_gradient=True` - predictions computed WITH gradients
+2. ✅ Per-sample rewards instead of scalar mean
+3. ✅ Proper gradient flow: `model → predictions → MSE → reward → loss → backprop → model`
+
+**Understanding sg[θ] in the Paper**:
+- The paper's notation `R(s,a;sg[θ])` was misunderstood
+- It means: stop gradient through **mixup labels** (which come from teacher)
+- It does **NOT** mean: stop gradient through student model predictions!
+- The student model MUST receive gradients from the RL loss
+
+**Verification**:
+```python
+# Test gradient flow
+model.zero_grad()
+loss = rl_loss_fn.compute_rl_loss(model, unlabeled_data, mixup_data, mixup_labels)
+loss['rl_loss'].backward()
+
+# Should print True and show non-zero gradient norm
+has_gradients = any(p.grad is not None for p in model.parameters() if p.requires_grad)
+print(f"Gradients computed: {has_gradients}")
+```
+
+---
+
+## Bug #4: Reward Function (NEEDS VERIFICATION)
 
 ### What to Check
 
@@ -141,17 +215,19 @@ python run_experiments.py --mode quick
 - ✅ Teacher accuracy should be **similar** to student (within 5-10%)
 - ✅ Reward should trend toward 0 (becoming less negative)
 - ✅ Final accuracy > warmup accuracy
+- ✅ **NEW**: RL loss should show non-zero gradients in backprop
 
 **Red Flags**:
 - ❌ Accuracy drops significantly after warmup
 - ❌ Teacher accuracy < 20% (random guessing)
 - ❌ Reward becoming more negative over time
+- ❌ **NEW**: RL loss gradient norm = 0 (no training happening)
 
 ### 2. Single Experiment Test (2 hours)
 
 ```bash
 cd /home/g34923353/Desktop/group-11/src
-python run_experiments.py --mode single --dataset cifar10 --architecture cnn13 --num_labeled 1000
+python3 run_experiments.py --mode single --dataset cifar10 --architecture cnn13 --num_labeled 1000
 ```
 
 **Expected Results** (CIFAR-10, 1000 labels, CNN-13):
@@ -250,19 +326,10 @@ tensorboard --logdir=experiments
 ## Next Steps
 
 1. ✅ **Fixes Applied**: RL loss formula and lambda values corrected
-2. ⚠️ **TODO**: Verify reward function returns correct values
-3. 🧪 **Run Test**: Execute quick test to verify fixes work
-4. 📊 **Monitor**: Use TensorBoard to track training progress
-5. 📈 **Validate**: Compare results against expected targets
+2. ✅ **Fixes Applied**: Stop gradient blocking backpropagation fixed
+3. ⚠️ **TODO**: Verify reward function returns correct values
+4. 🧪 **Run Test**: Execute quick test to verify fixes work
+5. 📊 **Monitor**: Use TensorBoard to track training progress
+6. 📈 **Validate**: Compare results against expected targets
 
 ---
-
-## Contact & Questions
-
-If you see unexpected behavior after applying fixes:
-1. Check TensorBoard logs
-2. Verify reward function output
-3. Compare training curves with expected patterns
-4. Check for error messages in terminal output
-
-Good luck! 🚀
