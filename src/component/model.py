@@ -3,8 +3,162 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import os
+import torch.optim as optim
+from config import *
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import accuracy_score
 
+# -----------------------------
+# Downstream Model Class
+# -----------------------------
+class DownstreamModel(nn.Module):
+    """
+    A CNN-based classification model for MNIST digit recognition.
 
+    This model serves as the downstream task classifier that gets trained on
+    labeled data and pseudo-labeled data. It combines the neural network
+    architecture with training and evaluation methods.
+
+    Architecture:
+        - Conv2d(1->16, 5x5) + ReLU + MaxPool2d
+        - Conv2d(16->32, 5x5) + ReLU + MaxPool2d
+        - Fully Connected(1568->128) + ReLU
+        - Fully Connected(128->10)
+
+    Attributes:
+        device (torch.device): Device for computations
+        conv1, conv2 (nn.Conv2d): Convolutional layers
+        pool (nn.MaxPool2d): Pooling layer
+        fc1, fc2 (nn.Linear): Fully connected layers
+        optimizer (optim.Adam): Optimizer for training
+        criterion (nn.CrossEntropyLoss): Loss function
+    """
+
+    def __init__(self, device):
+        """
+        Initialize the downstream CNN model.
+
+        Args:
+            device (torch.device): Device to place model on (CPU or CUDA)
+        """
+        super().__init__()
+        self.device = device
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2)
+        self.fc1 = nn.Linear(32 * 7 * 7, 128)
+        self.fc2 = nn.Linear(128, 10)
+        self.optimizer = optim.Adam(self.parameters(), lr=downstream_lr)
+        self.criterion = nn.CrossEntropyLoss()
+        self.to(device)
+
+    def forward(self, x):
+        """
+        Forward pass through the network.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, 784) or (batch_size, 1, 28, 28)
+
+        Returns:
+            torch.Tensor: Logits for each class, shape (batch_size, 10)
+        """
+        x = x.view(-1, 1, 28, 28)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 32 * 7 * 7)  # Flatten
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+    def train_model(self, labeled_data, pseudo_labeled_data, epochs=downstream_epocs):
+        """
+        Train the model on labeled and pseudo-labeled data.
+
+        Combines labeled training data with pseudo-labeled data and trains
+        the model for the specified number of epochs using mini-batch gradient descent.
+
+        Args:
+            labeled_data (tuple): Tuple of (features, labels) for labeled samples
+            pseudo_labeled_data (list): List of (feature, label) tuples for pseudo-labeled samples
+            epochs (int, optional): Number of training epochs. Defaults to downstream_epocs from config.
+        """
+        x_train, y_train = labeled_data
+
+        if pseudo_labeled_data:
+            pseudo_x = torch.stack([item[0] for item in pseudo_labeled_data])
+            pseudo_y = torch.stack([item[1] for item in pseudo_labeled_data])
+            x_train = torch.cat([x_train, pseudo_x])
+            y_train = torch.cat([y_train, pseudo_y])
+
+        if x_train.size(0) == 0:
+            return  # Nothing to train on
+
+        dataset = TensorDataset(x_train, y_train)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        self.train()
+        for _ in range(epochs):
+            for x_b, y_b in loader:
+                x_b = x_b.to(self.device)
+                y_b = y_b.to(self.device)
+                self.optimizer.zero_grad()
+                out = self(x_b)
+                loss = self.criterion(out, y_b.long())
+                loss.backward()
+                self.optimizer.step()
+
+    def evaluate_model(self, x_data, y_data):
+        """
+        Evaluate model accuracy on given data.
+
+        Args:
+            x_data (torch.Tensor): Input features to evaluate
+            y_data (torch.Tensor): True labels for evaluation
+
+        Returns:
+            float: Classification accuracy (between 0 and 1)
+        """
+        self.eval()
+        with torch.no_grad():
+            x_data = x_data.to(self.device)
+            y_data = y_data.to(self.device)
+            preds = torch.argmax(self(x_data), dim=1)
+            return accuracy_score(y_data.cpu(), preds.cpu())
+
+    def get_predictions(self, x_data):
+        """
+        Get probability distribution over classes for input data.
+
+        Args:
+            x_data (torch.Tensor): Input features, shape (batch_size, 784)
+
+        Returns:
+            torch.Tensor: Softmax probabilities for each class, shape (batch_size, 10)
+                         or (10,) if batch_size=1
+        """
+        self.eval()
+        with torch.no_grad():
+            x_data = x_data.to(self.device)
+            logits = self(x_data)
+            return F.softmax(logits, dim=1).squeeze()
+
+    def save_model(self, name='downstream', save_dir=None):
+        """
+        Save the downstream model state to disk.
+
+        Args:
+            name (str, optional): Base name for saved model file. Defaults to 'downstream'.
+            save_dir (str, optional): Directory to save model. Defaults to 'src/trained_models'
+                                     relative to the current file's directory.
+        """
+        if save_dir is None:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            save_dir = os.path.join(base_path, 'trained_models')
+
+        os.makedirs(save_dir, exist_ok=True)
+
+        torch.save(self.state_dict(), os.path.join(save_dir, f'{name}.pth'))
+        print(f"Downstream model saved to {save_dir}/{name}.pth")
 
 class PolicyNetwork(nn.Module):
     '''

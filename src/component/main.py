@@ -13,7 +13,7 @@ def main():
     writer = SummaryWriter(f"runs/{run_name}")
 
     # Create the Custom Environment
-    env = PseudoLabelEnv(NUM_LABELED=NUM_LABELED, NUM_UNLABELED=NUM_UNLABELED, NUM_VALIDATION=NUM_VALIDATION)
+    env = PseudoLabelEnv(num_labeled=num_labeled, num_unlabeled=num_unlabeled, num_validation=num_validation)
 
     # Get State and Action Dimensions
     state_dim = env.observation_space.shape[0]
@@ -23,21 +23,21 @@ def main():
     agent = PolicyGradient(
         state_dim=state_dim,
         num_actions=action_dim,
-        gamma=GAMMA,
-        alpha_pi=ALPHA_PI,
-        alpha_v=ALPHA_V,
-        hidden_dim=HIDDEN_DIM,
-        policy=POLICY_TYPE,
+        gamma=gamma,
+        alpha_pi=alpha_pi,
+        alpha_v=alpha_v,
+        hidden_dim=hidden_dim,
+        policy=policy_type,
         device=env.device
     )
 
-    # Initialize best error rate tracking
+    # Initialize the best error rate tracking
     best_error_rate = float('inf')
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
     print("Starting training with PyTorch agent...")
-    for episode in tqdm(range(EPISODES), desc="Training Progress"):
+    for episode in tqdm(range(episodes), desc="Training Progress"):
         state, info = env.reset()
         terminated = False
         
@@ -77,7 +77,7 @@ def main():
             
             print(f"Episode {episode+1}: Final Reward = {final_reward:.4f}, "
                   f"New Accuracy = {new_accuracy*100:.4f}, Error Rate = {error_rate*100:.4f}, "
-                  f"Policy Loss = {policy_loss:.4f}, Value Loss = {value_loss:.4f}\n")
+                  f"policy Loss = {policy_loss:.4f}, Value Loss = {value_loss:.4f}\n")
         
             # Check if this is the best error rate
             if error_rate < best_error_rate:
@@ -89,11 +89,11 @@ def main():
                 agent.save_model(name='best_policy_gradient', save_dir=save_dir)
 
         # Log policy and value losses
-        writer.add_scalar("Loss/Policy", policy_loss, episode)
+        writer.add_scalar("Loss/policy", policy_loss, episode)
         writer.add_scalar("Loss/Value", value_loss, episode)
 
     env.close()
-    writer.close()  # Close the TensorBoard writer
+    writer.close()
     print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
 

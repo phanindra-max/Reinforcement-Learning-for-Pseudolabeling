@@ -46,5 +46,5 @@ tmp/
 src/data
 trained_models/
 
-# Tesnorboard runs
+# Tensorboard runs
 runs
