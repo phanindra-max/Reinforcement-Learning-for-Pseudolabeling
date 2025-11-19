@@ -13,7 +13,7 @@ def main():
     writer = SummaryWriter(f"runs/{run_name}")
 
     # Create the Custom Environment
-    env = PseudoLabelEnv(NUM_LABELED=NUM_LABELED, NUM_UNLABELED=NUM_UNLABELED, NUM_VALIDATION=NUM_VALIDATION)
+    env = PseudoLabelEnv(num_labeled=num_labeled, num_unlabeled=num_unlabeled, num_validation=num_validation)
 
     # Get State and Action Dimensions
     state_dim = env.observation_space.shape[0]
@@ -23,21 +23,21 @@ def main():
     agent = PolicyGradient(
         state_dim=state_dim,
         num_actions=action_dim,
-        gamma=GAMMA,
-        alpha_pi=ALPHA_PI,
-        alpha_v=ALPHA_V,
-        hidden_dim=HIDDEN_DIM,
-        policy=POLICY_TYPE,
+        gamma=gamma,
+        alpha_pi=alpha_pi,
+        alpha_v=alpha_v,
+        hidden_dim=hidden_dim,
+        policy=policy_type,
         device=env.device
     )
 
-    # Initialize best accuracy tracking
-    best_accuracy = float('-inf')
+    # Initialize the best error rate tracking
+    best_error_rate = float('inf')
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
     print("Starting training with PyTorch agent...")
-    for episode in tqdm(range(EPISODES), desc="Training Progress"):
+    for episode in tqdm(range(episodes), desc="Training Progress"):
         state, info = env.reset()
         terminated = False
         
@@ -64,31 +64,37 @@ def main():
         # Log results from the info dict and episode metrics
         episode_reward = sum(sampled_rewards)  # Sum of step rewards
         if 'final_reward' in info:
-            episode_reward += info['new_accuracy'] - env.baseline_accuracy  # Include accuracy bonus
-            writer.add_scalar("Reward/Final", info['final_reward'], episode)
-            writer.add_scalar("Accuracy/New", info['new_accuracy']*100, episode)
-            writer.add_scalar("Error Rate", info['error_rate']*100, episode)
-            print(f"Episode {episode+1}: Final Reward = {info['final_reward']:.4f}, "
-                  f"New Accuracy = {info['new_accuracy']*100:.4f}, Error Rate = {info['error_rate']*100:.4f}, "
-                  f"Policy Loss = {policy_loss:.4f}, Value Loss = {value_loss:.4f}\n")
+            final_reward = info['final_reward']
+            new_accuracy = info['new_accuracy']
+            error_rate = info['error_rate']
+            
+            writer.add_scalar("Reward/Final", final_reward, episode)
+            # Log the sum of the trajectory rewards for comparison
+            writer.add_scalar("Reward/Episode", sum(sampled_rewards), episode)
+            
+            writer.add_scalar("Accuracy/New", new_accuracy*100, episode)
+            writer.add_scalar("Error Rate", error_rate*100, episode)
+            
+            print(f"Episode {episode+1}: Final Reward = {final_reward:.4f}, "
+                  f"New Accuracy = {new_accuracy*100:.4f}, Error Rate = {error_rate*100:.4f}, "
+                  f"policy Loss = {policy_loss:.4f}, Value Loss = {value_loss:.4f}\n")
         
-            # Check if this is the best accuracy
-            if info['new_accuracy'] > best_accuracy:
-                best_accuracy = info['new_accuracy']
-                print(f"New best accuracy: {best_accuracy*100:.4f}% - Saving models...")
+            # Check if this is the best error rate
+            if error_rate < best_error_rate:
+                best_error_rate = error_rate
+                print(f"New best error rate: {best_error_rate*100:.4f}% - Saving models...")
                 # Save downstream model
                 env.downstream_model.save_model(name='best_downstream', save_dir=save_dir)
                 # Save policy gradient models
                 agent.save_model(name='best_policy_gradient', save_dir=save_dir)
 
         # Log policy and value losses
-        writer.add_scalar("Loss/Policy", policy_loss, episode)
+        writer.add_scalar("Loss/policy", policy_loss, episode)
         writer.add_scalar("Loss/Value", value_loss, episode)
-        writer.add_scalar("Reward/Episode", episode_reward, episode)
 
     env.close()
-    writer.close()  # Close the TensorBoard writer
-    print(f"Training finished. Best accuracy achieved: {best_accuracy*100:.4f}%")
+    writer.close()
+    print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
 
 if __name__ == "__main__":
