@@ -1,0 +1,281 @@
+%% Please do not use \input{...} to include other tex files.
+%% Submit your LaTeX manuscript as one .tex document.
+%%
+%% All additional figures and files should be attached
+%% separately and not embedded in the \TeX\ document itself.
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%\documentclass[referee,sn-basic]{sn-jnl}% referee option is meant for double line spacing
+
+%%=======================================================%%
+%% to print line numbers in the margin use lineno option %%
+%%=======================================================%%
+
+%%\documentclass[lineno,pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%=========================================================================================%%
+%% the documentclass is set to pdflatex as default. You can delete it if not appropriate.  %%
+%%=========================================================================================%%
+
+%%\documentclass[sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%Note: the following reference styles support Namedate and Numbered referencing. By default the style follows the most common style. To switch between the options you can add or remove Numbered in the optional parenthesis. 
+%%The option is available for: sn-basic.bst, sn-chicago.bst%  
+ 
+%%\documentclass[pdflatex,sn-nature]{sn-jnl}% Style for submissions to Nature Portfolio journals
+%%\documentclass[pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+\documentclass[pdflatex,sn-mathphys-num,iicol]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+%%\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Math and Physical Sciences Author Year Reference Style
+%%\documentclass[pdflatex,sn-aps]{sn-jnl}% American Physical Society (APS) Reference Style
+%%\documentclass[pdflatex,sn-vancouver-num]{sn-jnl}% Vancouver Numbered Reference Style
+%%\documentclass[pdflatex,sn-vancouver-ay]{sn-jnl}% Vancouver Author Year Reference Style
+%%\documentclass[pdflatex,sn-apa]{sn-jnl}% APA Reference Style
+%%\documentclass[pdflatex,sn-chicago]{sn-jnl}% Chicago-based Humanities Reference Style
+
+%%%% Standard Packages
+%%<additional latex packages if required can be included here>
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+%%%%
+
+%%%%%=============================================================================%%%%
+%%%%  Remarks: This template is provided to aid authors with the preparation
+%%%%  of original research articles intended for submission to journals published 
+%%%%  by Springer Nature. The guidance has been prepared in partnership with 
+%%%%  production teams to conform to Springer Nature technical requirements. 
+%%%%  Editorial and presentation requirements differ among journal portfolios and 
+%%%%  research disciplines. You may find sections in this template are irrelevant 
+%%%%  to your work and are empowered to omit any such section if allowed by the 
+%%%%  journal you intend to submit to. The submission guidelines and policies 
+%%%%  of the journal take precedence. A detailed User Manual is available in the 
+%%%%  template package for technical guidance.
+%%%%%=============================================================================%%%%
+
+%% as per the requirement new theorem styles can be included as shown below
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}% 
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+%%\unnumbered% uncomment this for unnumbered level heads
+
+\begin{document}
+
+\title[RL for Pseudo-Labeling]{Reinforcement Learning for Pseudo-Labeling}
+
+%%=============================================================%%
+%% GivenName	-> \fnm{Joergen W.}
+%% Particle	-> \spfx{van der} -> surname prefix
+%% FamilyName	-> \sur{Ploeg}
+%% Suffix	-> \sfx{IV}
+%% \author*[1,2]{\fnm{Joergen W.} \spfx{van der} \sur{Ploeg} 
+%%  \sfx{IV}}\email{iauthor@gmail.com}
+%%=============================================================%%
+
+\author*[1]{\fnm{Satya Phanindra Kumar} \sur{Kalaga}}\email{placeholder@gwu.edu}
+
+\affil*[1]{\orgdiv{Data Science Program}, \orgname{The George Washington University}, \orgaddress{\street{Street}, \city{Washington}, \state{DC}, \country{USA}}}
+
+%%==================================%%
+%% Sample for unstructured abstract %%
+%%==================================%%
+
+\abstract{Semi-supervised learning addresses the challenge of limited labeled data by leveraging large amounts of unlabeled data. This project develops a reinforcement learning (RL) framework for intelligent pseudo-labeling, where an RL agent learns to selectively assign high-quality pseudo-labels to unlabeled samples. We implement and evaluate both a basic Policy Gradient approach on MNIST and a novel Reinforcement Learning-Guided Semi-Supervised Learning (RLGSSL) approach inspired by recent research. Our framework formulates pseudo-labeling as a sequential decision-making problem, with state representations based on image features, model predictions, and uncertainty measures. Experimental results demonstrate the effectiveness of confidence-based reward functions and adaptive training strategies. We identify key challenges including computational complexity, reward function design, and system stability issues that provide valuable insights for future work in RL-guided semi-supervised learning.}
+
+\keywords{Semi-Supervised Learning, Reinforcement Learning, Pseudo-Labeling, RLGSSL}
+
+%%\pacs[JEL Classification]{D8, H51}
+
+%%\pacs[MSC Classification]{35A01, 65L10, 65L12, 65L20, 65L70}
+
+\maketitle
+
+\section{Introduction}\label{sec1}
+
+In modern machine learning applications, obtaining large quantities of labeled training data is often expensive, time-consuming, and requires domain expertise. Semi-supervised learning (SSL) offers a promising solution by leveraging both limited labeled data and abundant unlabeled data to improve model performance. A key technique in SSL is pseudo-labeling, where a model assigns estimated labels to unlabeled samples, which are then used for further training.
+
+Traditional pseudo-labeling approaches rely on simple heuristics such as confidence thresholds, often selecting pseudo-labels based solely on prediction confidence. However, these methods can propagate errors when incorrect high-confidence predictions are blindly accepted, leading to confirmation bias and degraded model performance.
+
+This work addresses these limitations by framing pseudo-labeling as a reinforcement learning problem. By treating the selection and assignment of pseudo-labels as a sequential decision-making task, we enable an intelligent agent to learn optimal labeling strategies that balance exploration (diverse samples) and exploitation (high-confidence samples).
+
+We explore two complementary approaches to RL-based pseudo-labeling:
+\begin{enumerate}
+    \item \textbf{Approach 1}: A custom RL environment with Policy Gradients, implementing a complete framework from scratch.
+    \item \textbf{Approach 2}: The RLGSSL Framework, investigating and implementing the Reinforcement Learning-Guided Semi-Supervised Learning approach proposed by Heidari et al., which integrates RL with teacher-student frameworks and mixup augmentation.
+\end{enumerate}
+
+\section{Literature Review}\label{sec:lit_review}
+
+Semi-supervised learning has been extensively studied as a paradigm for learning from limited labeled data. Key approaches include Consistency Regularization (e.g., MixMatch, FixMatch), Self-Training, and Graph-Based Methods. Unlike these methods which often use fixed heuristics for pseudo-label selection, our RL-based approach learns adaptive selection strategies.
+
+Traditional pseudo-labeling assigns labels to unlabeled samples based on model predictions exceeding a confidence threshold. Recent improvements include Confidence-Based Selection \cite{heidari2024rlgssl} (TODO: confirm citation or add FixMatch citation), Temporal Ensembling (Mean Teacher), and MixUp Augmentation.
+
+Our primary inspiration comes from Heidari et al. \cite{heidari2024rlgssl}, who proposed RLGSSL, a framework that formulates semi-supervised learning as a reinforcement learning problem. Their key contributions include using the classification network itself as the RL policy, implementing reward signals derived from model performance on synthetically mixed samples (Mixup), and a novel loss formulation based on KL divergence weighting:
+\begin{equation}
+\mathcal{L}_{rl} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]
+\end{equation}
+
+Our work differs by exploring both custom RL environments with explicit state-action formulations and integrated RLGSSL approaches. We also introduce adaptive enhancements including confidence bonuses, diversity regularization, and curriculum learning mechanisms.
+
+% TODO: Add citations for MixMatch, FixMatch, Mean Teacher, Yarowsky 1995, etc.
+% TODO: Check citations for Active Learning and Curriculum Learning in the context of RL for Data Selection.
+
+\section{Methodology}\label{sec:method}
+
+We developed a comprehensive approach to RL-based pseudo-labeling using two implementations: a custom Policy Gradient framework and an RLGSSL-based approach with adaptive enhancements.
+
+\subsection{Gymnasium}\label{subsec:gym}
+
+We implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}, to encapsulate the pseudo-labeling task.
+
+\begin{itemize}
+    \item \textbf{env.reset()}: Resets the environment at the start of an episode. The downstream model may be re-initialized or preserved depending on the training mode. The environment prepares the first batch of unlabeled samples.
+    \item \textbf{env.step(action)}: Takes an action (assign label or skip) for the current sample $x_i$. Returns the next state $s_{i+1}$, the reward $r_i$, a done flag, and info.
+\end{itemize}
+
+% TODO: Add Pseudocode for the env.step logic showing state transition and immediate reward calculation.
+
+\subsection{MDP Formulation}\label{subsec:mdp}
+
+We formulate the problem as a Markov Decision Process (MDP):
+
+\begin{itemize}
+    \item \textbf{State Space ($\mathcal{S}$)}: For each unlabeled sample $x_i$, the state $s_i$ is constructed as $s_i = [\phi(x_i), P_\theta(x_i), H(P_\theta(x_i))]$, combining flattened image features $\phi(x_i)$, softmax class probabilities $P_\theta(x_i)$, and prediction entropy $H(P_\theta(x_i))$.
+    
+    \item \textbf{Action Space ($\mathcal{A}$)}: Discrete actions for a $K$-class problem: $\mathcal{A} = \{0, 1, \ldots, K-1, \text{skip}\}$. Actions $0$ to $K-1$ assign a pseudo-label; the skip action indicates the sample should not be labeled.
+    
+    \item \textbf{Reward Function ($R$)}: A confidence-weighted reward function encourages correct, high-confidence predictions:
+    \begin{equation}
+    R(s_i, a_i) = \begin{cases}
+    -0.1 & \text{if } a_i = \text{skip} \\
+    P_\theta(x_i)_{a_i} & \text{if } a_i = y_i^{\text{true}} \\
+    -P_\theta(x_i)_{a_i} & \text{if } a_i \neq y_i^{\text{true}}
+    \end{cases}
+    \end{equation}
+    Note: $y_i^{\text{true}}$ is used only for reward computation during training in the custom environment setting. In the RLGSSL approach, rewards are derived from performance on Mixup samples without ground truth access for unlabeled data.
+    
+    In RLGSSL, the reward signal evaluates performance on mixup data:
+    \begin{equation}
+    R(s, a; \text{sg}[\theta]) = -\text{MSE}(P_\theta(x_i^m), y_i^m)
+    \end{equation}
+    
+    \item \textbf{Terminal State}: The episode terminates when all $N$ unlabeled samples in the current batch or dataset have been processed.
+\end{itemize}
+
+\subsection{Models}\label{subsec:models}
+
+\subsubsection{Downstream Model}
+The downstream classification model serves as the primary classifier and, in the RLGSSL framework, also acts as the policy. For MNIST experiments, we utilized a Convolutional Neural Network (CNN) with two Conv2D layers followed by Fully Connected layers.
+\begin{equation}
+\text{logits} = \text{CNN}(x; \theta)
+\end{equation}
+This model generates softmax predictions and entropy values used for state construction.
+
+% TODO: Add Table for Downstream Model Architecture (Layer, Output Shape, Parameters).
+
+\subsubsection{RL Agents}
+\textbf{Policy Gradient Agent}: An Actor-Critic architecture where the Policy Network maps states to action logits, and the Value Network estimates state values. Updates are performed using standard Policy Gradient losses.
+
+\textbf{RLGSSL Agent}: The classification network itself serves as the RL policy. The RL loss combines KL divergence weighting with reward scaling:
+\begin{equation}
+\mathcal{L}_{\text{rl}} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]
+\end{equation}
+Adaptive enhancements such as confidence bonuses and diversity regularization were integrated to improve stability.
+
+\subsection{Metrics}\label{subsec:metrics}
+We evaluated performance using:
+\begin{itemize}
+    \item \textbf{Accuracy}: Classification accuracy on the validation/test set.
+    \item \textbf{RL Loss}: The specific loss component optimizing the pseudo-labeling policy.
+    \item \textbf{Reward}: Average reward per episode or batch, indicating the quality of pseudo-labeling decisions.
+\end{itemize}
+
+\section{Results}\label{sec:results}
+
+\subsection{Policy Gradient Results}
+The Policy Gradient agent demonstrated adaptive behavior, learning to balance pseudo-labeling and skipping. Initial baseline accuracy was $\sim$85\% on MNIST with 1000 labeled samples.
+
+% TODO: Add Table/Figure for Policy Gradient learning curves (Validation Accuracy vs. Episode).
+
+\subsection{RLGSSL Results}
+Table \ref{tab:rlgssl_training} shows the training progression on CIFAR-10 with 1000 labeled samples.
+
+\begin{table}[h]
+\caption{RLGSSL training progression on CIFAR-10 (1000 labels).}\label{tab:rlgssl_training}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+Epoch & Acc (\%) & Loss & RL Loss & Notes \\
+\midrule
+5 (warmup) & 29.12 & -- & -- & Student: 29.12\%, Teacher: 10.00\% \\
+60 & 36.51 & 0.2101 & 0.0102 & Stable initial training \\
+120 & 43.06 & 0.1808 & -0.0018 & Steady improvement \\
+175 & \textbf{45.55} & 0.1285 & -0.0383 & Best accuracy \\
+240 & 36.20 & -0.0485 & -0.2837 & System crashed (Instability) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The best student accuracy achieved was 45.55\% at Epoch 175. Training was impacted by system instability and computational constraints (crashes around epoch 240).
+
+% TODO: Add comparison table with literature benchmarks (Heidari et al. results vs Our Target).
+
+\section{Discussion}\label{sec:discussion}
+
+Our experiments highlighted significant challenges in applying RL to pseudo-labeling.
+
+\textbf{Reward Function Design}: Designing effective rewards was critical. We found that sparse rewards (end-of-episode accuracy) were insufficient, while dense, confidence-based rewards introduced stability issues. The adaptive reward enhancements in RLGSSL, specifically diversity bonuses, likely contributed to gradient explosions.
+
+\textbf{Implementation Challenges}: We identified and resolved several critical bugs:
+\begin{enumerate}
+    \item \textbf{Inverted RL Loss}: Initially computed as positive correlation with MSE, causing the model to minimize prediction quality.
+    \item \textbf{Stop Gradient}: A misunderstanding of $\text{sg}[\theta]$ initially blocked gradients to the student model, preventing learning.
+    \item \textbf{Imbalanced Weights}: Low weights for supervised loss allowed the RL objective to dominate, leading to collapse.
+\end{enumerate}
+Correcting these stabilized training but performance gaps remained compared to state-of-the-art.
+
+\section{Conclusion}\label{sec:conclusion}
+
+This project demonstrated the feasibility of RL-based pseudo-labeling, developing both a custom Gymnasium environment and an RLGSSL implementation. While we achieved stable initial training and adaptive behavior, the approach is computationally demanding and sensitive to hyperparameter settings.
+
+\subsection{Limitations}
+\begin{itemize}
+    \item \textbf{Computational Constraints}: Training on CPU was insufficient, with runs taking 15+ hours and failing to complete full epochs.
+    \item \textbf{Stability}: Adaptive reward enhancements caused numerical instability and crashes.
+    \item \textbf{Performance}: Results were below state-of-the-art benchmarks, partly due to incomplete training and the complexity of tuning RL components.
+\end{itemize}
+
+\subsection{Future Scope}
+Future work should focus on:
+\begin{itemize}
+    \item \textbf{Gymnasium Registration}: Registering the custom pseudo-labeling environment as a standard Gymnasium package to facilitate community research.
+    \item \textbf{Debugging Tool}: Developing a specialized debugging tool for custom RL environments to visualize state transitions and reward signals in real-time.
+    \item \textbf{Optimization}: Implementing PPO-style clipping and gradient normalization to address stability.
+\end{itemize}
+% TODO: Verify if any other specific future scope items need to be added.
+
+\bibliography{sn-bibliography}
+\end{document}
