@@ -46,20 +46,21 @@
 %Title of the report, name of coworkers and dates (of experiment and of report).
 \begin{titlepage}
 	\centering
-	\includegraphics[width=0.6\textwidth]{GW_logo.eps}\par
+	\includegraphics[width=0.6\textwidth]{fig/GW_logo-eps-converted-to.pdf}\par
 	\vspace{2cm}
 	%%%% COMMENT OUT irrelevant lines below: Data Science OR Computer Science OR none
 	{\scshape\LARGE Data Science Program \par}
 	\vspace{1cm}
-	{\scshape\Large Capstone Report - Spring 2025\par}
+	{\scshape\Large Capstone Report - Fall 2025\par}
 	%{\large \today\par}
 	\vspace{1.5cm}
 	%%%% PROJECT TITLE
 	{\huge\bfseries Reinforcement Learning for Pseudo-Labeling in Semi-Supervised Learning\par}
 	\vspace{2cm}
 	%%%% AUTHOR(S)
-	{\Large\itshape Satya Phanindra Kumar Kalaga\\}\par
-	\vspace{1.5cm}
+	{\Large\itshape Aishwarya Maddula, Deepika Reddygari\\}\par
+  {\Large\itshape Prudhvi Chekuri, Phanindra Kalaga\\}\par
+	\vspace{2cm}
 	supervised by\par
 	%%%% SUPERVISOR(S)
 	Prof. Tyler Wallett\\
@@ -592,35 +593,24 @@ Table~\ref{tab:rlgssl_training} shows the training dynamics observed during RLGS
     \centering
     \begin{tabular}{lcccc}
         \hline
-        \textbf{Dataset} & \textbf{Labels} & \textbf{Architecture} & \textbf{Paper Result} & \textbf{Our Target} \\
+        \textbf{Dataset} & \textbf{Labels} & \textbf{Architecture} & \textbf{Paper Result} & \textbf{Our Result} \\
         \hline
-        \multicolumn{5}{c}{\textbf{CIFAR-10}} \\
-        \hline
-        CIFAR-10 & 1000 & CNN-13 & 85-90\% acc & 75-85\% \textbf{[TODO]} \\
-        CIFAR-10 & 2000 & CNN-13 & 88-92\% acc & 80-88\% \textbf{[TODO]} \\
-        CIFAR-10 & 4000 & CNN-13 & 90-93\% acc & 85-90\% \textbf{[TODO]} \\
-        CIFAR-10 & 1000 & WRN-28 & 87-92\% acc & 78-88\% \textbf{[TODO]} \\
-        \hline
-        \multicolumn{5}{c}{\textbf{CIFAR-100}} \\
-        \hline
-        CIFAR-100 & 4000 & CNN-13 & 48-52\% acc & 45-50\% \textbf{[TODO]} \\
-        CIFAR-100 & 10000 & CNN-13 & 55-60\% acc & 50-55\% \textbf{[TODO]} \\
+        CIFAR-10 & 1000 & CNN-13 & 9.15\% error & \textbf{[Incomplete]} \\
+        CIFAR-10 & 2000 & CNN-13 & 7.18\% error & \textbf{[TODO]} \\
+        CIFAR-10 & 4000 & CNN-13 & 6.11\% error & \textbf{[TODO]} \\
         \hline
     \end{tabular}
-    \caption{Comparison with Heidari et al.~\cite{heidari2024rlgssl} results and realistic target ranges. Some performance gap from paper is expected due to implementation details, hyperparameter tuning differences, and data augmentation strategies.}
+    \caption{Comparison with Heidari et al.~\cite{heidari2024rlgssl} results. Paper reports test error rates; equivalent accuracies are 90.85\%, 92.82\%, and 93.89\% respectively.}
     \label{tab:comparison_literature}
 \end{table}
 
-\textbf{Analysis Gap:} Our best observed accuracy of 45.55\% at epoch 175 (before crashes) is significantly below target ranges. This discrepancy stems from:
+\textbf{Analysis Gap:} Our best observed accuracy of 45.55\% is significantly below the paper's reported 90.85\% (9.15\% error). This discrepancy likely stems from:
 \begin{itemize}
-    \item \textbf{Implementation Bugs:} Four critical bugs were identified and fixed (see Discussion section), including inverted RL loss formula, imbalanced loss weights, and crucially, stop-gradient blocking backpropagation
-    \item \textbf{Incomplete Training:} System crashed at epoch 240 vs. target 450 epochs
-    \item \textbf{Post-Fix Evaluation Pending:} After bug fixes, complete training runs needed to assess true performance
-    \item \textbf{Hyperparameter Tuning:} Default values may not be optimal; systematic grid search required
-    \item \textbf{Data Augmentation:} Potential differences in augmentation strategies compared to paper implementation
+    \item Incomplete training (crashed at epoch 240 vs. target 450)
+    \item Potential bugs in adaptive enhancement implementations
+    \item Need for more careful hyperparameter tuning
+    \item Possible differences in data preprocessing or augmentation strategies
 \end{itemize}
-
-\textbf{Note on Performance Expectations:} The target ranges shown are 5-10\% below paper results, accounting for typical implementation gaps in research reproduction. Achieving these targets would validate correct implementation.
 
 \textbf{[TODO: Complete full training runs and perform detailed error analysis]}
 
@@ -738,119 +728,6 @@ The pseudo-labeling environment violates key RL assumptions:
 \end{itemize}
 
 \textbf{Recommendation:} Consider meta-learning approaches where the policy is trained across multiple dataset/model combinations to develop more robust pseudo-labeling strategies.
-
-\subsection{Critical Implementation Bugs and Resolutions}
-
-Through rigorous debugging and experimentation, we identified and resolved four critical bugs that initially caused catastrophic performance failures. This section documents these issues to benefit future implementations.
-
-\subsubsection{Bug \#1: Inverted RL Loss Formula}
-
-\textbf{Problem:} The RL loss was computed with incorrect sign handling:
-\begin{equation}
-\mathcal{L}_{\text{rl}}^{\text{wrong}} = -\text{KL}(e, y_i^u) \times R \quad \text{where } R = -\text{MSE}
-\end{equation}
-
-This resulted in $\mathcal{L}_{\text{rl}} = \text{KL} \times \text{MSE}$ (positive), causing gradient descent to minimize the loss by pushing toward \emph{more negative} rewards, which corresponds to \emph{worse} predictions.
-
-\textbf{Symptoms Observed:}
-\begin{itemize}
-    \item Performance degraded from 46\% to 41\% immediately after warmup ended
-    \item Best accuracy occurred at epoch 60 (right after warmup)
-    \item Teacher accuracy collapsed to 10-14\% (random guessing level)
-    \item CIFAR-100 accuracy dropped catastrophically from 42\% to 0.99\%
-\end{itemize}
-
-\textbf{Resolution:} Corrected the loss formula to:
-\begin{equation}
-\mathcal{L}_{\text{rl}}^{\text{correct}} = \text{KL}(e, y_i^u) \times (-R) = \text{KL}(e, y_i^u) \times \text{MSE}
-\end{equation}
-
-With proper sign handling, minimizing this loss now correctly optimizes toward better predictions (less negative rewards).
-
-\subsubsection{Bug \#2: Imbalanced Loss Component Weights}
-
-\textbf{Problem:} Initial hyperparameters set $\lambda_{\text{sup}} = \lambda_{\text{cons}} = 0.1$, which were far too small. Loss magnitudes were:
-\begin{itemize}
-    \item RL loss: $\sim$0.1-0.3 (unscaled)
-    \item Supervised loss: $\sim$0.9-2.3 $\times$ 0.1 = 0.09-0.23
-    \item Consistency loss: $\sim$0.05-0.6 $\times$ 0.1 = 0.005-0.06
-\end{itemize}
-
-The broken RL loss dominated optimization, destroying model performance.
-
-\textbf{Resolution:} Increased weights to $\lambda_{\text{sup}} = \lambda_{\text{cons}} = 1.0$, achieving balanced loss components of similar magnitudes. This allowed supervised learning to provide strong guidance while RL and consistency losses contributed meaningfully.
-
-\subsubsection{Bug \#3: Stop Gradient Blocking Backpropagation}
-
-This was the \textbf{most critical bug}—the RL loss had zero gradient flow to the student model.
-
-\textbf{Problem:} Misinterpretation of the paper's $\text{sg}[\theta]$ notation led to applying stop-gradient to student model predictions:
-
-\begin{lstlisting}[language=Python]
-# WRONG: Blocks all gradients
-reward = reward_fn.compute_reward(
-    model, mixup_data, mixup_labels, 
-    stop_gradient=True
-)
-weighted_loss = kl_weights.mean() * (-reward)
-\end{lstlisting}
-
-The reward was computed under \texttt{torch.no\_grad()}, producing a scalar with no gradient information. The RL loss component was completely disconnected from model parameters—it couldn't train anything!
-
-\textbf{What Actually Happened:}
-\begin{enumerate}
-    \item Warmup (epochs 0-50): Model trained with supervised + consistency losses → 48\% accuracy
-    \item RLGSSL phase (epochs 51+): RL loss had no gradients; only supervised + consistency trained
-    \item Supervised loss operated on tiny labeled set (1000 samples)—insufficient for continued improvement
-    \item Consistency loss became useless as teacher degraded (following the broken student via EMA)
-    \item Model collapsed to 10\% (random guessing)
-\end{enumerate}
-
-\textbf{Correct Interpretation:} The paper's $\text{sg}[\theta]$ notation means stop-gradient through \emph{mixup labels} (which come from the teacher model), NOT through student predictions. The student model must receive gradients from the RL loss.
-
-\textbf{Resolution:} Implemented proper gradient flow:
-
-\begin{lstlisting}[language=Python]
-# CORRECT: Gradients flow through student predictions
-model_predictions = model.get_probabilities(mixup_data)
-per_sample_mse = F.mse_loss(
-    model_predictions, mixup_labels, reduction='none'
-).mean(dim=1)
-per_sample_rewards = -per_sample_mse
-per_sample_loss = kl_weights * (-per_sample_rewards)
-weighted_loss = per_sample_loss.mean()
-# Now: model → predictions → MSE → reward → loss → backprop
-\end{lstlisting}
-
-\textbf{Verification Method:}
-\begin{lstlisting}[language=Python]
-model.zero_grad()
-loss = rl_loss_fn.compute_rl_loss(...)
-loss['rl_loss'].backward()
-has_gradients = any(p.grad is not None 
-                   for p in model.parameters() 
-                   if p.requires_grad)
-# Should print True with non-zero gradient norm
-\end{lstlisting}
-
-\subsubsection{Bug \#4: Scalar vs. Per-Sample Rewards}
-
-\textbf{Problem:} Original implementation used scalar rewards (mean over batch), preventing proper per-sample gradient weighting. The RL loss could not differentiate between samples in the batch.
-
-\textbf{Resolution:} Implemented per-sample rewards and losses, enabling the model to learn different gradient magnitudes for different samples based on their individual prediction quality.
-
-\subsubsection{Impact of Bug Fixes}
-
-After resolving all four bugs, we observed:
-\begin{itemize}
-    \item ✅ Accuracy increased or remained stable after warmup (no more collapse)
-    \item ✅ Teacher accuracy tracked student within 5-10\% (EMA working correctly)
-    \item ✅ Reward values trended toward 0 (less negative over time)
-    \item ✅ RL loss showed non-zero gradients in backpropagation
-    \item ✅ Training became stable for extended periods (no crashes for 175+ epochs)
-\end{itemize}
-
-These fixes transformed the implementation from catastrophic failure to functional training, though performance remained below paper results, indicating further hyperparameter tuning and implementation refinement opportunities.
 
 \subsection{Insights on RLGSSL Formulation}
 
@@ -1207,122 +1084,7 @@ def calculate_reward(pred_label, true_label, action, probs):
     \item Custom Environment Tutorial: \url{https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/}
 \end{itemize}
 
-\subsection{E: Diagnostic Procedures and Common Issues}
-
-This section documents common issues encountered during implementation and their solutions, providing guidance for future debugging efforts.
-
-\subsubsection{Verification Tests}
-
-\textbf{Test 1: Gradient Flow Verification}
-\begin{lstlisting}[language=Python]
-# Verify RL loss produces gradients
-model.zero_grad()
-loss = rl_loss_fn.compute_rl_loss(model, unlabeled_data, 
-                                   mixup_data, mixup_labels)
-loss['rl_loss'].backward()
-
-has_gradients = any(p.grad is not None 
-                   for p in model.parameters() 
-                   if p.requires_grad)
-grad_norm = torch.nn.utils.clip_grad_norm_(
-    model.parameters(), float('inf')
-)
-print(f"Gradients present: {has_gradients}")
-print(f"Gradient norm: {grad_norm:.6f}")
-# Expected: True and non-zero norm
-\end{lstlisting}
-
-\textbf{Test 2: Reward Function Validation}
-\begin{lstlisting}[language=Python]
-# Verify reward returns correct values
-reward = reward_fn.compute_reward(model, mixup_data, 
-                                  mixup_labels)
-print(f"Reward value: {reward.item():.6f}")
-print(f"Is negative: {reward.item() <= 0}")
-print(f"Is scalar: {reward.dim() == 0}")
-# Expected: negative scalar value
-\end{lstlisting}
-
-\textbf{Test 3: Teacher-Student EMA Update}
-\begin{lstlisting}[language=Python]
-# Check teacher follows student via EMA
-student_acc = evaluate_model(student_model, val_data)
-teacher_acc = evaluate_model(teacher_model, val_data)
-gap = abs(student_acc - teacher_acc)
-print(f"Student: {student_acc:.2%}, Teacher: {teacher_acc:.2%}")
-print(f"Gap: {gap:.2%}")
-# Expected: gap < 10% after warmup
-\end{lstlisting}
-
-\subsubsection{Common Issues and Solutions}
-
-\textbf{Issue 1: Teacher Accuracy Stuck at 10-20\%}
-\begin{itemize}
-    \item \textbf{Cause}: EMA update not being called, or RL loss blocking gradients
-    \item \textbf{Diagnosis}: Check if \texttt{framework.update\_teacher()} is called after each batch
-    \item \textbf{Solution}: Ensure proper update schedule and verify gradient flow
-\end{itemize}
-
-\textbf{Issue 2: Performance Degradation After Warmup}
-\begin{itemize}
-    \item \textbf{Cause}: Inverted RL loss formula or imbalanced loss weights
-    \item \textbf{Diagnosis}: Check if accuracy drops immediately when RL loss activates
-    \item \textbf{Solution}: Verify loss formula signs and balance $\lambda$ values
-\end{itemize}
-
-\textbf{Issue 3: NaN Losses}
-\begin{itemize}
-    \item \textbf{Cause}: Gradient explosion or numerical instability
-    \item \textbf{Diagnosis}: Monitor gradient norms in TensorBoard
-    \item \textbf{Solution}: Enable gradient clipping:
-    \begin{lstlisting}[language=Python]
-torch.nn.utils.clip_grad_norm_(model.parameters(), 
-                               max_norm=1.0)
-    \end{lstlisting}
-\end{itemize}
-
-\textbf{Issue 4: Out of Memory Errors}
-\begin{itemize}
-    \item \textbf{Cause}: Batch size too large, or maintaining too many model copies
-    \item \textbf{Diagnosis}: Monitor GPU memory usage
-    \item \textbf{Solution}: Reduce batch size from 128 to 64 or 32; ensure proper \texttt{torch.no\_grad()} usage during evaluation
-\end{itemize}
-
-\textbf{Issue 5: System Crashes During Training}
-\begin{itemize}
-    \item \textbf{Cause}: Numerical instability in adaptive reward enhancements
-    \item \textbf{Diagnosis}: Check reward values for extreme magnitudes
-    \item \textbf{Solution}: Disable adaptive enhancements temporarily; add reward clipping:
-    \begin{lstlisting}[language=Python]
-reward = torch.clamp(reward, min=-10.0, max=0.0)
-    \end{lstlisting}
-\end{itemize}
-
-\subsubsection{Monitoring Checklist}
-
-Use TensorBoard to monitor these key metrics:
-
-\begin{enumerate}
-    \item \textbf{Accuracy/Student}: Should increase or stabilize after warmup
-    \item \textbf{Accuracy/Teacher}: Should track student within 5-10\%
-    \item \textbf{RL/Reward}: Should trend toward 0 (less negative over time)
-    \item \textbf{Loss/Total}: Should decrease steadily
-    \item \textbf{Loss/RL\_Loss}: Should be similar magnitude to supervised loss
-    \item \textbf{Loss/Supervised}: Should decrease during warmup
-    \item \textbf{Loss/Consistency}: Should be moderate, not dominating
-    \item \textbf{Gradient/Norm}: Should be non-zero and stable (not exploding)
-\end{enumerate}
-
-\textbf{Red Flags}:
-\begin{itemize}
-    \item Accuracy drops sharply after epoch 50 (warmup end)
-    \item Teacher accuracy $<$ 20\% after epoch 100
-    \item Reward becomes increasingly negative
-    \item Any loss component shows NaN values
-    \item Gradient norms exceed 100 consistently
-\end{itemize}
-
-\subsection{F: Acknowledgments}
+\subsection{E: Acknowledgments}
 
 \textbf{[TODO: Add acknowledgments for:}
 \begin{itemize}

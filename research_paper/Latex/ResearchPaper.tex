@@ -96,7 +96,11 @@
 %%  \sfx{IV}}\email{iauthor@gmail.com}
 %%=============================================================%%
 
-\author*[1]{\fnm{Satya Phanindra Kumar} \sur{Kalaga}}\email{placeholder@gwu.edu}
+\author*[1]{\fnm{Satya Phanindra Kumar} \sur{Kalaga}}\email{sk380@gwmail.gwu.edu}
+
+\author[1]{\fnm{Aishwarya} \sur{Maddula}}
+\author[1]{\fnm{Deepika} \sur{Reddygari}}
+\author[1]{\fnm{Prudhvi} \sur{Chekuri}}
 
 \affil*[1]{\orgdiv{Data Science Program}, \orgname{The George Washington University}, \orgaddress{\street{Street}, \city{Washington}, \state{DC}, \country{USA}}}
 
@@ -118,7 +122,7 @@
 
 In modern machine learning applications, obtaining large quantities of labeled training data is often expensive, time-consuming, and requires domain expertise. Semi-supervised learning (SSL) offers a promising solution by leveraging both limited labeled data and abundant unlabeled data to improve model performance. A key technique in SSL is pseudo-labeling, where a model assigns estimated labels to unlabeled samples, which are then used for further training.
 
-Traditional pseudo-labeling approaches rely on simple heuristics such as confidence thresholds, often selecting pseudo-labels based solely on prediction confidence. However, these methods can propagate errors when incorrect high-confidence predictions are blindly accepted, leading to confirmation bias and degraded model performance.
+Traditional pseudo-labeling approaches rely on simple heuristics such as confidence thresholds, often selecting pseudo-labels based solely on prediction confidence. However, these methods can propagate errors when incorrect high-confidence predictions are blindly accepted, leading to confirmation bias \cite{arazo2020pseudolabelingconfirmationbiasdeep} and degraded model performance.
 
 This work addresses these limitations by framing pseudo-labeling as a reinforcement learning problem. By treating the selection and assignment of pseudo-labels as a sequential decision-making task, we enable an intelligent agent to learn optimal labeling strategies that balance exploration (diverse samples) and exploitation (high-confidence samples).
 
@@ -132,7 +136,7 @@ We explore two complementary approaches to RL-based pseudo-labeling:
 
 Semi-supervised learning has been extensively studied as a paradigm for learning from limited labeled data. Key approaches include Consistency Regularization (e.g., MixMatch, FixMatch), Self-Training, and Graph-Based Methods. Unlike these methods which often use fixed heuristics for pseudo-label selection, our RL-based approach learns adaptive selection strategies.
 
-Traditional pseudo-labeling assigns labels to unlabeled samples based on model predictions exceeding a confidence threshold. Recent improvements include Confidence-Based Selection \cite{heidari2024rlgssl} (TODO: confirm citation or add FixMatch citation), Temporal Ensembling (Mean Teacher), and MixUp Augmentation.
+Traditional pseudo-labeling assigns labels to unlabeled samples based on model predictions exceeding a confidence threshold. Recent improvements include Confidence-Based Selection \cite{sohn2020fixmatchsimplifyingsemisupervisedlearning}, Temporal Ensembling (Mean Teacher), and MixUp Augmentation. RL has also been explored for selective pseudo-labeling in domain adaptation contexts \cite{liu2020selectivepseudolabelingreinforcementlearning}.
 
 Our primary inspiration comes from Heidari et al. \cite{heidari2024rlgssl}, who proposed RLGSSL, a framework that formulates semi-supervised learning as a reinforcement learning problem. Their key contributions include using the classification network itself as the RL policy, implementing reward signals derived from model performance on synthetically mixed samples (Mixup), and a novel loss formulation based on KL divergence weighting:
 \begin{equation}
@@ -150,14 +154,45 @@ We developed a comprehensive approach to RL-based pseudo-labeling using two impl
 
 \subsection{Gymnasium}\label{subsec:gym}
 
-We implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}, to encapsulate the pseudo-labeling task.
+We implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}, to encapsulate the pseudo-labeling task. The overall system flow is illustrated in Figure \ref{fig:system_flow}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{Fig/flowchart.jpeg}
+\caption{Architecture of the custom RL pseudo-labeling environment, showing interactions between the environment, agent, and downstream model.}
+\label{fig:system_flow}
+\end{figure}
 
 \begin{itemize}
     \item \textbf{env.reset()}: Resets the environment at the start of an episode. The downstream model may be re-initialized or preserved depending on the training mode. The environment prepares the first batch of unlabeled samples.
     \item \textbf{env.step(action)}: Takes an action (assign label or skip) for the current sample $x_i$. Returns the next state $s_{i+1}$, the reward $r_i$, a done flag, and info.
 \end{itemize}
 
-% TODO: Add Pseudocode for the env.step logic showing state transition and immediate reward calculation.
+The training loop for the RL agent follows the procedure outlined in Algorithm \ref{alg:rl_training}.
+
+\begin{algorithm}[h]
+\caption{RL agent training loop}
+\label{alg:rl_training}
+\scriptsize
+\begin{algorithmic}[1]
+  \Require state\_dim, action\_dim, labeled\_data, unlabeled\_data, num\_episodes
+  \State agent $\leftarrow$ \texttt{RLAgent}(state\_dim, action\_dim)
+  \State env $\leftarrow$ \texttt{PseudoLabelEnv}(labeled\_data, unlabeled\_data)
+  \For{episode = 1 \textbf{to} num\_episodes}
+  \State state $\leftarrow$ env.reset()
+  \State done $\leftarrow$ false
+  \While{not done}
+  \State action $\leftarrow$ agent.select\_action(state)
+  \State $(\text{next\_state},\ \text{reward},\ \text{terminated},\ \text{info}) \leftarrow \text{env.step(action)}$
+  \State state $\leftarrow$ next\_state
+  \State done $\leftarrow$ terminated
+  \EndWhile
+  \State agent.update()
+  \State accuracy $\leftarrow$ env.evaluate()
+  \EndFor
+  \State env.close()
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{MDP Formulation}\label{subsec:mdp}
 
@@ -219,7 +254,23 @@ We evaluated performance using:
 \subsection{Policy Gradient Results}
 The Policy Gradient agent demonstrated adaptive behavior, learning to balance pseudo-labeling and skipping. Initial baseline accuracy was $\sim$85\% on MNIST with 1000 labeled samples.
 
-% TODO: Add Table/Figure for Policy Gradient learning curves (Validation Accuracy vs. Episode).
+\begin{figure*}[h]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Fig/rlgssl_learning_curve.pdf} % Placeholder: update filename
+        \caption{Learning curve for RLGSSL approach on CIFAR-10.}
+        \label{fig:rlgssl_curve}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{Fig/fixmatch_comparison.pdf} % Placeholder: update filename
+        \caption{Comparison with FixMatch baseline implementation.}
+        \label{fig:fixmatch_curve}
+    \end{minipage}
+    \caption{Training dynamics and comparative analysis of learning curves.}
+    \label{fig:combined_learning_curves}
+\end{figure*}
 
 \subsection{RLGSSL Results}
 Table \ref{tab:rlgssl_training} shows the training progression on CIFAR-10 with 1000 labeled samples.
