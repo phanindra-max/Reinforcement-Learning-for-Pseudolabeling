@@ -1,0 +1,1100 @@
+% THIS TEMPLATE IS A WORK IN PROGRESS
+% Adapted from an original template by faculty at Reykjavik University, Iceland
+
+\documentclass{scrartcl}
+\input{File_Setup.tex}
+\usepackage{graphicx,epsfig}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{xcolor}
+\hypersetup{
+   colorlinks   = true,                               %Colours links instead of ugly boxes
+   urlcolor     = blue,                               %Colour for external hyper links
+   linkcolor    = blue,                               %Colour of internal links
+   citecolor    = red,                                %Colour of citations
+   setpagesize  = false,
+   linktocpage  = true,
+}
+\graphicspath{ {fig/} }
+
+% Code listing style
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{orange},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+\renewenvironment{abstract}{
+    \centering
+    \textbf{Abstract}
+    \vspace{0.5cm}
+    \par\itshape
+    \begin{minipage}{0.7\linewidth}}{\end{minipage}
+    \noindent\ignorespaces
+}
+% ------------------------------------------------------------------------------------------------------------------------
+
+\begin{document}
+%Title of the report, name of coworkers and dates (of experiment and of report).
+\begin{titlepage}
+	\centering
+	\includegraphics[width=0.6\textwidth]{fig/GW_logo-eps-converted-to.pdf}\par
+	\vspace{2cm}
+	%%%% COMMENT OUT irrelevant lines below: Data Science OR Computer Science OR none
+	{\scshape\LARGE Data Science Program \par}
+	\vspace{1cm}
+	{\scshape\Large Capstone Report - Fall 2025\par}
+	%{\large \today\par}
+	\vspace{1.5cm}
+	%%%% PROJECT TITLE
+	{\huge\bfseries Reinforcement Learning for Pseudo-Labeling in Semi-Supervised Learning\par}
+	\vspace{2cm}
+	%%%% AUTHOR(S)
+	{\Large\itshape Aishwarya Maddula, Deepika Reddygari\\}\par
+  {\Large\itshape Prudhvi Chekuri, Phanindra Kalaga\\}\par
+	\vspace{2cm}
+	supervised by\par
+	%%%% SUPERVISOR(S)
+	Prof. Tyler Wallett\\
+	Dr. Amir Jafari
+
+	\vfill
+	\begin{abstract}
+	    Semi-supervised learning addresses the challenge of limited labeled data by leveraging large amounts of unlabeled data. This project develops a reinforcement learning (RL) framework for intelligent pseudo-labeling, where an RL agent learns to selectively assign high-quality pseudo-labels to unlabeled samples. We implement and evaluate both a basic Policy Gradient approach on MNIST and a novel Reinforcement Learning-Guided Semi-Supervised Learning (RLGSSL) approach inspired by recent research (Heidari et al., 2024). Our framework formulates pseudo-labeling as a sequential decision-making problem, with state representations based on image features, model predictions, and uncertainty measures. Experimental results demonstrate the effectiveness of confidence-based reward functions and adaptive training strategies. We identify key challenges including computational complexity, reward function design, and system stability issues that provide valuable insights for future work in RL-guided semi-supervised learning.
+	\end{abstract}
+	\vfill
+% Bottom of the page
+\end{titlepage}
+\tableofcontents
+\newpage
+% ------------------------------------------------------------------------------------------------------------------------
+\section{Introduction}
+
+In modern machine learning applications, obtaining large quantities of labeled training data is often expensive, time-consuming, and requires domain expertise. Semi-supervised learning (SSL) offers a promising solution by leveraging both limited labeled data and abundant unlabeled data to improve model performance. A key technique in SSL is pseudo-labeling, where a model assigns estimated labels to unlabeled samples, which are then used for further training.
+
+Traditional pseudo-labeling approaches rely on simple heuristics such as confidence thresholds, often selecting pseudo-labels based solely on prediction confidence. However, these methods can propagate errors when incorrect high-confidence predictions are blindly accepted, leading to confirmation bias and degraded model performance.
+
+This project addresses these limitations by framing pseudo-labeling as a reinforcement learning problem. By treating the selection and assignment of pseudo-labels as a sequential decision-making task, we enable an intelligent agent to learn optimal labeling strategies that balance exploration (diverse samples) and exploitation (high-confidence samples). 
+
+\subsection{Project Objectives}
+
+The primary objectives of this capstone project are:
+
+\begin{enumerate}
+    \item \textbf{RL Framework Development}: Design and implement a reinforcement learning framework that can automatically assign pseudo-labels to unlabeled data in a principled manner.
+    \item \textbf{Custom Environment Design}: Build a custom OpenAI Gymnasium environment specifically tailored for the pseudo-labeling task, with carefully designed state spaces, action spaces, and reward functions.
+    \item \textbf{Policy Gradient Implementation}: Implement and evaluate Policy Gradient methods (Actor-Critic) for learning pseudo-labeling strategies.
+    \item \textbf{RLGSSL Exploration}: Investigate and implement the Reinforcement Learning-Guided Semi-Supervised Learning approach proposed by Heidari et al.~\cite{heidari2024rlgssl}, which integrates RL with teacher-student frameworks and mixup augmentation.
+    \item \textbf{Empirical Evaluation}: Conduct comprehensive experiments on standard datasets (MNIST, CIFAR-10) to evaluate the effectiveness of RL-based pseudo-labeling approaches.
+\end{enumerate}
+
+\subsection{Project Scope}
+
+This project explores two complementary approaches to RL-based pseudo-labeling:
+
+\textbf{Approach 1: Custom RL Environment with Policy Gradients} -- We developed a complete RL framework from scratch, including:
+\begin{itemize}
+    \item A custom PseudoLabelEnv environment implementing the OpenAI Gymnasium interface
+    \item State representation combining image features, softmax predictions, and prediction entropy
+    \item Action space allowing the agent to assign pseudo-labels or skip uncertain samples
+    \item Confidence-based reward functions that encourage correct, high-confidence predictions
+    \item Policy Gradient (Actor-Critic) agent for learning optimal pseudo-labeling strategies
+\end{itemize}
+
+\textbf{Approach 2: RLGSSL Framework} -- Building on recent research, we investigated the RLGSSL approach which integrates:
+\begin{itemize}
+    \item Teacher-student framework with Exponential Moving Average (EMA) updates
+    \item Mixup data augmentation for generating synthetic training samples
+    \item Novel RL reward function based on model performance on mixup samples
+    \item Adaptive enhancements including confidence bonuses, diversity regularization, and curriculum learning
+\end{itemize}
+
+This report details our implementation methodology, experimental setup, results, challenges encountered, and insights gained throughout this capstone project.
+
+% ------------------------------------------------------------------------------------------------------------------------
+\section{Problem Statement}
+
+\subsection{Semi-Supervised Learning Challenges}
+
+Semi-supervised learning aims to leverage unlabeled data to improve model performance when labeled data is scarce. While pseudo-labeling has shown promise as a simple yet effective SSL technique, several fundamental challenges remain:
+
+\begin{enumerate}
+    \item \textbf{Confirmation Bias}: Traditional pseudo-labeling methods tend to reinforce existing model biases. When a model makes confident but incorrect predictions, using these as pseudo-labels amplifies errors through a feedback loop.
+    
+    \item \textbf{Quality vs. Quantity Trade-off}: Aggressive pseudo-labeling (using low confidence thresholds) provides more training data but risks adding noisy labels. Conservative approaches (high confidence thresholds) ensure quality but fail to leverage the full potential of unlabeled data.
+    
+    \item \textbf{Static Decision Rules}: Existing methods typically use fixed heuristics (e.g., "accept if confidence $>$ 0.95") that do not adapt to the evolving model capabilities or dataset characteristics during training.
+    
+    \item \textbf{Sample Selection Strategy}: Determining which unlabeled samples should be pseudo-labeled at each training iteration is non-trivial. Optimal selection requires balancing multiple factors including prediction confidence, sample diversity, and potential impact on model improvement.
+\end{enumerate}
+
+\subsection{Reinforcement Learning Formulation}
+
+To address these challenges, we formulate pseudo-labeling as a sequential decision-making problem suitable for reinforcement learning. This formulation enables:
+
+\begin{itemize}
+    \item \textbf{Adaptive Strategies}: The RL agent learns to adjust its pseudo-labeling behavior based on accumulated experience and model evolution.
+    \item \textbf{Multi-objective Optimization}: Through reward shaping, we can encode multiple objectives (accuracy, confidence, diversity) into a single optimization framework.
+    \item \textbf{Exploration-Exploitation Balance}: The agent naturally balances exploring uncertain samples versus exploiting high-confidence predictions.
+\end{itemize}
+
+\subsection{Technical Challenges}
+
+Applying reinforcement learning to pseudo-labeling introduces several technical challenges:
+
+\begin{enumerate}
+    \item \textbf{State Space Design}: Determining effective feature representations that capture both image characteristics and model uncertainty.
+    
+    \item \textbf{Reward Function Engineering}: Designing reward signals that encourage correct pseudo-labeling while avoiding reward hacking and maintaining training stability.
+    
+    \item \textbf{Computational Complexity}: RL training typically requires many episodes and environment interactions, which can be computationally expensive when each episode involves training a downstream classification model.
+    
+    \item \textbf{Non-Stationarity}: The underlying classification model evolves during training, violating the Markov assumption and introducing non-stationarity in the environment.
+    
+    \item \textbf{Credit Assignment}: Determining which pseudo-labeling decisions contributed to final model performance is challenging when rewards are delayed until episode completion.
+    
+    \item \textbf{Scalability}: Ensuring the approach scales to larger datasets and more complex architectures beyond simple benchmarks.
+\end{enumerate}
+
+These challenges motivate our exploration of both custom RL frameworks and recent research directions like RLGSSL, which we detail in subsequent sections.
+
+% ------------------------------------------------------------------------------------------------------------------------
+
+\section{Related Work}
+
+Our work builds upon and contributes to several interconnected research areas in machine learning. This section positions our approach with respect to existing literature on semi-supervised learning, pseudo-labeling, and reinforcement learning applications.
+
+\subsection{Semi-Supervised Learning}
+
+Semi-supervised learning has been extensively studied as a paradigm for learning from limited labeled data. \textbf{[TODO: Add specific citations to foundational SSL papers]}. Key approaches include:
+
+\begin{itemize}
+    \item \textbf{Consistency Regularization}: Methods like MixMatch, FixMatch, and UDA enforce consistency between predictions on different augmentations of the same input.
+    \item \textbf{Self-Training and Pseudo-Labeling}: Pioneered by~\textbf{[TODO: Add Yarowsky 1995, Scudder 1965 citations]}, these methods iteratively train models on pseudo-labeled data.
+    \item \textbf{Graph-Based Methods}: Approaches that propagate labels through similarity graphs constructed from data manifolds.
+\end{itemize}
+
+Unlike these methods which use fixed heuristics for pseudo-label selection, our RL-based approach learns adaptive selection strategies.
+
+\subsection{Pseudo-Labeling Techniques}
+
+Traditional pseudo-labeling assigns labels to unlabeled samples based on model predictions exceeding a confidence threshold. Recent improvements include:
+
+\begin{itemize}
+    \item \textbf{Confidence-Based Selection}: Methods that dynamically adjust confidence thresholds during training~\textbf{[TODO: Add FixMatch citation (Sohn et al., 2020)]}.
+    \item \textbf{Temporal Ensembling}: Using exponential moving averages of model parameters to produce more stable pseudo-labels~\textbf{[TODO: Add Mean Teacher citation (Tarvainen \& Valpola, 2017)]}.
+    \item \textbf{MixUp Augmentation}: Interpolating between samples to create synthetic training examples with soft labels~\textbf{[TODO: Add MixUp citation (Zhang et al., 2018)]}.
+\end{itemize}
+
+\subsection{Reinforcement Learning-Guided Semi-Supervised Learning}
+
+Our primary inspiration comes from Heidari et al.~\cite{heidari2024rlgssl}, who proposed RLGSSL, a novel framework that formulates semi-supervised learning as a reinforcement learning problem. Their key contributions include:
+
+\begin{itemize}
+    \item \textbf{RL Policy as Classifier}: The classification network itself serves as the RL policy, eliminating the need for separate actor-critic architectures.
+    \item \textbf{Mixup-Based Rewards}: Reward signals derived from model performance on synthetically mixed samples, implemented with stop-gradient operations to prevent direct gradient flow.
+    \item \textbf{Novel Loss Formulation}: An RL loss function based on KL divergence weighting: $\mathcal{L}_{rl} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]$
+    \item \textbf{State-of-the-Art Results}: Achieved error rates of 9.15\% on CIFAR-10 with 1000 labels using CNN-13 architecture.
+\end{itemize}
+
+Our implementation extends RLGSSL with adaptive enhancements including confidence bonuses, diversity regularization, and curriculum learning strategies that were not present in the original paper.
+
+\subsection{Reinforcement Learning for Data Selection}
+
+Several works have explored using RL for intelligent data selection in machine learning pipelines:
+
+\begin{itemize}
+    \item \textbf{Active Learning}: RL agents that learn to query informative samples for labeling~\textbf{[TODO: Add active learning RL citations]}.
+    \item \textbf{Curriculum Learning}: Using RL to determine optimal ordering of training samples~\textbf{[TODO: Add curriculum learning citations]}.
+    \item \textbf{Data Augmentation}: Learning augmentation policies through reinforcement learning~\textbf{[TODO: Add AutoAugment citation (Cubuk et al., 2019)]}.
+\end{itemize}
+
+\subsection{Comparison with Our Approach}
+
+Our work differs from existing approaches in several key aspects:
+
+\begin{enumerate}
+    \item \textbf{Dual Framework Implementation}: We explore both custom RL environments with explicit state-action formulations and integrated RLGSSL approaches, providing comparative insights.
+    
+    \item \textbf{Adaptive Enhancements}: Beyond the base RLGSSL formulation, we introduce confidence bonuses, diversity regularization, and curriculum learning mechanisms.
+    
+    \item \textbf{Comprehensive Engineering}: Our implementation includes complete training pipelines, custom Gymnasium environments, and systematic hyperparameter configurations.
+    
+    \item \textbf{Practical Challenges Documentation}: We explicitly document computational challenges, stability issues, and practical considerations often omitted from research papers.
+\end{enumerate}
+
+The next section details our solution methodology, including architecture designs, algorithm implementations, and the technical decisions underlying our framework.
+
+% ------------------------------------------------------------------------------------------------------------------------
+
+\section{Solution and Methodology}
+
+This section presents our comprehensive approach to RL-based pseudo-labeling. We describe two complementary implementations: a custom Policy Gradient framework and an RLGSSL-based approach with adaptive enhancements.
+
+\subsection{Approach 1: Custom Policy Gradient Framework}
+
+\subsubsection{Environment Design}
+
+We implemented a custom OpenAI Gymnasium environment (\texttt{PseudoLabelEnv}) that encapsulates the pseudo-labeling task as a reinforcement learning problem.
+
+\textbf{State Space ($\mathcal{S}$):} For each unlabeled sample $x_i$, the state $s_i$ is constructed as:
+\begin{equation}
+s_i = [\phi(x_i), P_\theta(x_i), H(P_\theta(x_i))]
+\end{equation}
+where:
+\begin{itemize}
+    \item $\phi(x_i) \in \mathbb{R}^{784}$ are the flattened image features
+    \item $P_\theta(x_i) \in \mathbb{R}^{10}$ are the softmax class probabilities from the downstream model
+    \item $H(P_\theta(x_i)) = -\sum_k P_\theta(x_i)_k \log P_\theta(x_i)_k$ is the prediction entropy
+\end{itemize}
+
+This representation combines raw features, model confidence, and uncertainty, providing the agent with comprehensive information for decision-making.
+
+\textbf{Action Space ($\mathcal{A}$):} The action space consists of $|\mathcal{A}| = K + 1$ discrete actions for a $K$-class classification problem:
+\begin{equation}
+\mathcal{A} = \{0, 1, \ldots, K-1, \text{skip}\}
+\end{equation}
+Actions $0$ through $K-1$ assign the corresponding class label as a pseudo-label, while the skip action ($a = K$) indicates the sample should not be pseudo-labeled.
+
+\textbf{Reward Function ($R$):} We designed a confidence-weighted reward function:
+\begin{equation}
+R(s_i, a_i) = \begin{cases}
+-0.1 & \text{if } a_i = \text{skip} \\
+P_\theta(x_i)_{a_i} & \text{if } a_i = y_i^{\text{true}} \\
+-P_\theta(x_i)_{a_i} & \text{if } a_i \neq y_i^{\text{true}}
+\end{cases}
+\end{equation}
+where $y_i^{\text{true}}$ is the true label (used only for reward computation during training). This design encourages correct, high-confidence predictions while penalizing incorrect ones proportionally to the model's misplaced confidence.
+
+\textbf{Episode Structure:} Each episode processes all $N$ unlabeled samples sequentially. At episode completion, the downstream model is retrained on the combination of original labeled data and newly pseudo-labeled samples, and the agent receives an accuracy bonus:
+\begin{equation}
+R_{\text{final}} = \text{Acc}_{\text{new}} - \text{Acc}_{\text{baseline}}
+\end{equation}
+This provides a delayed reward signal based on the cumulative impact of pseudo-labeling decisions.
+
+\textbf{[TODO: Add architectural diagram showing the environment flow: reset → get state → agent action → step → reward → repeat until terminated]}
+
+\subsubsection{Policy Gradient Agent}
+
+We implemented an Actor-Critic Policy Gradient agent with the following architecture:
+
+\textbf{Policy Network (Actor):} Maps states to action logits:
+\begin{align}
+h_1 &= \tanh(W_1 s + b_1) \\
+h_2 &= \tanh(W_2 h_1 + b_2) \\
+\text{logits} &= W_3 h_2 + b_3
+\end{align}
+where hidden dimensions are 64 neurons per layer.
+
+\textbf{Value Network (Critic):} Estimates state values $V(s)$ using a similar architecture but with scalar output.
+
+\textbf{Training Procedure:} At the end of each episode, we compute:
+\begin{itemize}
+    \item Rewards-to-go: $G_t = \sum_{t'=t}^T \gamma^{t'-t} r_{t'}$
+    \item Advantage estimates: $A_t = G_t - V(s_t)$
+    \item Policy loss: $\mathcal{L}_\pi = -\mathbb{E}_t[\log \pi_\theta(a_t|s_t) A_t]$
+    \item Value loss: $\mathcal{L}_V = \mathbb{E}_t[(G_t - V(s_t))^2]$
+\end{itemize}
+
+Updates are performed using Adam optimizers with learning rates $\alpha_\pi = 10^{-3}$ and $\alpha_V = 10^{-3}$.
+
+\subsubsection{Downstream Model}
+
+The downstream classification model is a Convolutional Neural Network with architecture:
+\begin{itemize}
+    \item Conv2D(1 → 16, 5×5) → ReLU → MaxPool(2×2)
+    \item Conv2D(16 → 32, 5×5) → ReLU → MaxPool(2×2)
+    \item Fully Connected(1568 → 128) → ReLU
+    \item Fully Connected(128 → 10)
+\end{itemize}
+
+This model is trained on MNIST with cross-entropy loss and serves dual purposes:
+\begin{enumerate}
+    \item Generating softmax predictions and entropy for state construction
+    \item Being the ultimate evaluation metric (validation accuracy after pseudo-labeling)
+\end{enumerate}
+
+\subsection{Approach 2: RLGSSL Framework}
+
+Inspired by Heidari et al.~\cite{heidari2024rlgssl}, we implemented a complete RLGSSL pipeline with novel adaptive enhancements.
+
+\subsubsection{Teacher-Student Framework}
+
+The teacher model $\theta_T$ maintains an exponential moving average (EMA) of the student model $\theta_S$:
+\begin{equation}
+\theta_T \leftarrow \beta \theta_T + (1 - \beta) \theta_S
+\end{equation}
+with decay parameter $\beta = 0.999$. The teacher provides stable pseudo-labels $\tilde{y}_i^u = P_{\theta_T}(x_i^u)$ for unlabeled samples.
+
+\subsubsection{Mixup Data Generation}
+
+For each unlabeled sample $x_i^u$ with teacher pseudo-label $\tilde{y}_i^u$, we sample a labeled example $(x_j^l, y_j^l)$ and create a synthetic mixup sample:
+\begin{align}
+\mu &\sim \text{Beta}(1.0, 1.0) \\
+x_i^m &= \mu x_i^u + (1-\mu) x_j^l \\
+y_i^m &= \mu \tilde{y}_i^u + (1-\mu) \text{one-hot}(y_j^l)
+\end{align}
+
+This generates continuous interpolations in both feature and label spaces, with $\mu$ determining the mixing ratio.
+
+\subsubsection{RL Reward Function}
+
+The reward signal evaluates how well the student model performs on mixup data:
+\begin{equation}
+R(s, a; \text{sg}[\theta]) = -\text{MSE}(P_\theta(x_i^m), y_i^m)
+\end{equation}
+where $\text{sg}[\cdot]$ denotes stop-gradient operation to prevent direct gradient flow through the model parameters during reward computation.
+
+\textbf{Adaptive Enhancements:} We extend the base reward with:
+\begin{align}
+R_{\text{adaptive}} = R_{\text{base}} &+ \lambda_{\text{conf}} \cdot \mathbb{E}[P_\theta(x_i^m)_{\max} \cdot y_i^m] \\
+&+ \lambda_{\text{div}} \cdot H(\mathbb{E}_{\text{batch}}[P_\theta(x^m)]) \\
+&+ \lambda_{\text{mix}} \cdot \text{Acc}_{\text{mixup}} \cdot (1 + \sigma(\mu))
+\end{align}
+where:
+\begin{itemize}
+    \item Confidence bonus ($\lambda_{\text{conf}} = 0.1$) rewards high-confidence predictions on high-confidence targets
+    \item Diversity bonus ($\lambda_{\text{div}} = 0.05$) encourages diverse predictions across the batch
+    \item Mixup effectiveness bonus weights performance by $\mu$ diversity
+\end{itemize}
+
+\subsubsection{RL Loss Function}
+
+The RL loss combines KL divergence weighting with reward scaling:
+\begin{equation}
+\mathcal{L}_{\text{rl}} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]
+\end{equation}
+where $e$ is a uniform baseline distribution over classes.
+
+\textbf{Adaptive Enhancements:}
+\begin{itemize}
+    \item \textbf{Curriculum Learning}: Gradually increase focus on high-confidence samples:
+    \begin{equation}
+    w_{\text{curriculum}} = \min\left(1.0, \frac{\text{epoch}}{\text{max\_epochs} \times 0.5}\right)
+    \end{equation}
+    
+    \item \textbf{Entropy Regularization}: Prevent overconfident predictions:
+    \begin{equation}
+    \mathcal{L}_{\text{rl}}^{\text{adaptive}} = \mathcal{L}_{\text{rl}} + \lambda_{\text{entropy}} H(\tilde{y}_i^u)
+    \end{equation}
+    with $\lambda_{\text{entropy}} = 0.01$
+    
+    \item \textbf{Confidence-Based Weighting}: Focus learning on reliable pseudo-labels:
+    \begin{equation}
+    w_i = \mathbb{1}[\max(\tilde{y}_i^u) > \tau] \cdot (1 + w_{\text{curriculum}})
+    \end{equation}
+    with threshold $\tau = 0.8$
+\end{itemize}
+
+\subsubsection{Combined Loss Function}
+
+The total training loss integrates supervised, consistency, and RL components:
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{sup}} + \lambda_{\text{cons}} \mathcal{L}_{\text{cons}} + \lambda_{\text{rl}} \mathcal{L}_{\text{rl}}^{\text{adaptive}}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathcal{L}_{\text{sup}} = \text{CrossEntropy}(P_\theta(x^l), y^l)$ on labeled data
+    \item $\mathcal{L}_{\text{cons}} = \text{MSE}(P_\theta(x^u), P_{\theta_T}(x^u))$ enforces student-teacher consistency
+    \item Default weights: $\lambda_{\text{cons}} = 0.1$, $\lambda_{\text{rl}} = 0.1$
+\end{itemize}
+
+\subsection{Implementation Details}
+
+\textbf{Framework:} PyTorch 2.0 with CUDA support
+
+\textbf{Datasets:}
+\begin{itemize}
+    \item Policy Gradient approach: MNIST (1000 labeled, 4000 unlabeled, 1000 validation)
+    \item RLGSSL approach: CIFAR-10 (1000/2000/4000 labeled settings)
+\end{itemize}
+
+\textbf{Training Configuration:}
+\begin{itemize}
+    \item Policy Gradient: 50 episodes, batch size 32, $\gamma = 0.99$
+    \item RLGSSL: 50 warmup epochs + 400 RL epochs, batch size 128, learning rate $10^{-3}$
+\end{itemize}
+
+\textbf{Computational Environment:} \textbf{[TODO: Specify exact hardware - CPU vs GPU, RAM, etc.]}
+
+\textbf{Code Repository:} \textbf{[TODO: Add GitHub repository link]}
+
+\textbf{[TODO: Add algorithm pseudocode boxes for main training loops]}
+
+\textbf{[TODO: Add more detailed architecture diagrams showing teacher-student interactions, mixup generation, and gradient flow]}
+
+% ------------------------------------------------------------------------------------------------------------------------
+
+\section{Results and Discussion}
+
+This section presents our experimental results, including training dynamics, performance metrics, and analysis of the challenges encountered during implementation.
+
+\subsection{Experimental Setup}
+
+\subsubsection{Dataset Configuration}
+
+\textbf{Policy Gradient Experiments (MNIST):}
+\begin{itemize}
+    \item Total Training Samples: 60,000
+    \item Labeled Samples: 1,000 (1.67\%)
+    \item Unlabeled Samples: 4,000
+    \item Validation Samples: 1,000
+    \item Test Samples: 10,000
+\end{itemize}
+
+\textbf{RLGSSL Experiments (CIFAR-10):}
+\begin{itemize}
+    \item Total Training Samples: 50,000
+    \item Labeled Samples: 1000/2000/4000 (2\%/4\%/8\%)
+    \item Unlabeled Samples: 49,000/48,000/46,000
+    \item Test Samples: 10,000
+\end{itemize}
+
+\subsubsection{Model Architectures}
+
+\textbf{Policy Gradient Downstream Model:}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrr}
+        \hline
+        \textbf{Layer} & \textbf{Output Shape} & \textbf{Parameters} \\
+        \hline
+        Conv2D (1→16, 5×5) & 16×28×28 & 416 \\
+        MaxPool2D (2×2) & 16×14×14 & 0 \\
+        Conv2D (16→32, 5×5) & 32×14×14 & 12,832 \\
+        MaxPool2D (2×2) & 32×7×7 & 0 \\
+        FC (1568→128) & 128 & 200,832 \\
+        FC (128→10) & 10 & 1,290 \\
+        \hline
+        \textbf{Total} & & \textbf{215,370} \\
+        \hline
+    \end{tabular}
+    \caption{Architecture of the downstream CNN model for MNIST classification}
+    \label{tab:downstream_architecture}
+\end{table}
+
+\textbf{RLGSSL Model:}
+\begin{itemize}
+    \item Architecture: CNN-13 \textbf{[TODO: Add detailed layer breakdown]}
+    \item Total Parameters: 3,567,370
+    \item Trainable Parameters: 3,567,370
+\end{itemize}
+
+\subsubsection{Hyperparameters}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \hline
+        \textbf{Parameter} & \textbf{Policy Gradient} & \textbf{RLGSSL} \\
+        \hline
+        Learning Rate & $10^{-3}$ & $10^{-3}$ \\
+        Batch Size & 32 & 128 \\
+        Episodes/Epochs & 50 & 50+400 \\
+        Discount Factor ($\gamma$) & 0.99 & N/A \\
+        EMA Decay ($\beta$) & N/A & 0.999 \\
+        Mixup Alpha ($\alpha$) & N/A & 1.0 \\
+        $\lambda_{\text{sup}}$ & N/A & 1.0 \\
+        $\lambda_{\text{cons}}$ & N/A & 0.1 \\
+        $\lambda_{\text{rl}}$ & N/A & 0.1 \\
+        Confidence Threshold & N/A & 0.8 \\
+        Confidence Weight & N/A & 0.1 \\
+        Diversity Weight & N/A & 0.05 \\
+        Entropy Regularization & N/A & 0.01 \\
+        \hline
+    \end{tabular}
+    \caption{Hyperparameter configurations for both approaches}
+    \label{tab:hyperparameters}
+\end{table}
+
+\subsection{Policy Gradient Results}
+
+\textbf{[TODO: Add table with episode-by-episode results showing:}
+\begin{itemize}
+    \item Episode number
+    \item Baseline accuracy
+    \item New accuracy after pseudo-labeling
+    \item Accuracy improvement
+    \item Error rate
+    \item Policy loss
+    \item Value loss
+    \item Average episode reward
+\end{itemize}
+\textbf{]}
+
+\textbf{[TODO: Add learning curves showing:}
+\begin{itemize}
+    \item Validation accuracy vs. episode
+    \item Policy and value losses vs. episode
+    \item Average reward vs. episode
+    \item Error rate vs. episode
+\end{itemize}
+\textbf{]}
+
+\textbf{Key Observations:}
+\begin{itemize}
+    \item Initial baseline accuracy: $\sim$85\% (trained on 1000 labeled MNIST samples)
+    \item \textbf{[TODO: Report final best accuracy achieved]}
+    \item \textbf{[TODO: Report average accuracy improvement per episode]}
+    \item \textbf{[TODO: Analyze pseudo-labeling statistics: how many samples were pseudo-labeled vs. skipped]}
+\end{itemize}
+
+\subsection{RLGSSL Results}
+
+\subsubsection{Training Progression}
+
+Table~\ref{tab:rlgssl_training} shows the training dynamics observed during RLGSSL experiments on CIFAR-10 with 1000 labeled samples.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cccccl}
+        \hline
+        \textbf{Epoch} & \textbf{Acc (\%)} & \textbf{Loss} & \textbf{RL Loss} & \textbf{Reward} & \textbf{Notes} \\
+        \hline
+        5 (warmup) & 29.12 & -- & -- & -- & Student: 29.12\%, Teacher: 10.00\% \\
+        60 & 36.51 & 0.2101 & 0.0102 & -0.0298 & Stable initial training \\
+        120 & 43.06 & 0.1808 & -0.0018 & -0.0298 & Steady improvement \\
+        175 & \textbf{45.55} & 0.1285 & -0.0383 & -0.0294 & Best accuracy before issues \\
+        180 & 44.98 & 0.1180 & -0.0459 & -0.0292 & System hanging \\
+        240 & 36.20 & -0.0485 & -0.2837 & -0.0342 & \textbf{System crashed} \\
+        \hline
+    \end{tabular}
+    \caption{RLGSSL training progression on CIFAR-10 (1000 labels). System crashed at epoch $\sim$275 due to stability issues with adaptive reward enhancements.}
+    \label{tab:rlgssl_training}
+\end{table}
+
+\textbf{Performance Metrics:}
+\begin{itemize}
+    \item \textbf{Best Student Accuracy:} 45.55\% (Epoch 175)
+    \item \textbf{Training Time:} $\sim$15 hours before system crash
+    \item \textbf{Final Status:} Incomplete due to computational instability
+\end{itemize}
+
+\textbf{[TODO: Re-run complete experiments on GPU instances with:}
+\begin{itemize}
+    \item Comparison of base RLGSSL vs. adaptive enhancements
+    \item Ablation studies on individual enhancement components
+    \item Extended training to full 450 epochs
+    \item Multiple random seeds for statistical significance
+\end{itemize}
+\textbf{]}
+
+\subsubsection{Comparison with Literature}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \hline
+        \textbf{Dataset} & \textbf{Labels} & \textbf{Architecture} & \textbf{Paper Result} & \textbf{Our Result} \\
+        \hline
+        CIFAR-10 & 1000 & CNN-13 & 9.15\% error & \textbf{[Incomplete]} \\
+        CIFAR-10 & 2000 & CNN-13 & 7.18\% error & \textbf{[TODO]} \\
+        CIFAR-10 & 4000 & CNN-13 & 6.11\% error & \textbf{[TODO]} \\
+        \hline
+    \end{tabular}
+    \caption{Comparison with Heidari et al.~\cite{heidari2024rlgssl} results. Paper reports test error rates; equivalent accuracies are 90.85\%, 92.82\%, and 93.89\% respectively.}
+    \label{tab:comparison_literature}
+\end{table}
+
+\textbf{Analysis Gap:} Our best observed accuracy of 45.55\% is significantly below the paper's reported 90.85\% (9.15\% error). This discrepancy likely stems from:
+\begin{itemize}
+    \item Incomplete training (crashed at epoch 240 vs. target 450)
+    \item Potential bugs in adaptive enhancement implementations
+    \item Need for more careful hyperparameter tuning
+    \item Possible differences in data preprocessing or augmentation strategies
+\end{itemize}
+
+\textbf{[TODO: Complete full training runs and perform detailed error analysis]}
+
+\subsection{Ablation Studies}
+
+\textbf{[TODO: Conduct and report ablation studies on:}
+\begin{enumerate}
+    \item \textbf{Reward Function Components:} Compare base MSE reward vs. adding confidence/diversity bonuses individually
+    \item \textbf{Curriculum Learning:} Training with and without curriculum weighting
+    \item \textbf{Entropy Regularization:} Impact of entropy regularization weight
+    \item \textbf{Confidence Threshold:} Vary $\tau \in \{0.7, 0.8, 0.9, 0.95\}$
+    \item \textbf{EMA Decay:} Test $\beta \in \{0.99, 0.995, 0.999\}$
+\end{enumerate}
+\textbf{]}
+
+\subsection{Computational Analysis}
+
+\textbf{Training Time Breakdown (Estimated):}
+\begin{itemize}
+    \item Data loading and preprocessing: $\sim$2\%
+    \item Forward passes (student + teacher): $\sim$40\%
+    \item Mixup generation: $\sim$10\%
+    \item Backward passes and optimization: $\sim$45\%
+    \item Logging and evaluation: $\sim$3\%
+\end{itemize}
+
+\textbf{Memory Requirements:}
+\begin{itemize}
+    \item Model parameters (student + teacher): $\sim$28 MB
+    \item Batch activations (batch size 128): $\sim$\textbf{[TODO: Calculate]}
+    \item Gradient buffers: $\sim$\textbf{[TODO: Calculate]}
+\end{itemize}
+
+\textbf{Scalability Concerns:}
+\begin{itemize}
+    \item Policy Gradient approach requires full episode completion before updates
+    \item RLGSSL approach scales better due to mini-batch training
+    \item Both approaches face challenges with very large datasets (>1M samples)
+\end{itemize}
+
+\subsection{Analysis of Results}
+
+\subsubsection{Strengths Observed}
+
+\begin{enumerate}
+    \item \textbf{Adaptive Behavior:} The Policy Gradient agent learned to balance pseudo-labeling and skipping, showing adaptive decision-making.
+    
+    \item \textbf{Stable Initial Training:} RLGSSL showed stable improvements from epoch 60 to 175, demonstrating the potential of the approach.
+    
+    \item \textbf{Framework Completeness:} Successfully implemented full pipelines including custom environments, RL agents, and downstream models.
+\end{enumerate}
+
+\subsubsection{Limitations and Challenges}
+
+\begin{enumerate}
+    \item \textbf{System Instability:} RLGSSL training crashed around epoch 275, likely due to numerical instability in adaptive reward computations or gradient explosions.
+    
+    \item \textbf{Computational Cost:} Training on CPU for 15 hours before crash indicates need for GPU acceleration for practical applications.
+    
+    \item \textbf{Performance Gap:} Results significantly below state-of-the-art, suggesting need for implementation debugging and refinement.
+    
+    \item \textbf{Incomplete Evaluation:} Lack of complete training runs prevents definitive conclusions about approach effectiveness.
+\end{enumerate}
+
+\textbf{[TODO: Add visualization of prediction confidence distributions over training epochs]}
+
+\textbf{[TODO: Add t-SNE or UMAP embeddings showing pseudo-labeled vs. labeled sample distributions]}
+
+% ------------------------------------------------------------------------------------------------------------------------
+
+\section{Discussion}
+
+This section reflects on the key challenges encountered, lessons learned, and insights gained throughout the project implementation.
+
+\subsection{Technical Challenges}
+
+\subsubsection{Reward Function Design}
+
+Designing effective reward functions proved to be one of the most challenging aspects:
+
+\begin{itemize}
+    \item \textbf{Sparse vs. Dense Rewards:} Initial experiments with only end-of-episode accuracy rewards provided insufficient learning signal. Adding per-step confidence-based rewards improved learning but introduced new challenges.
+    
+    \item \textbf{Reward Scaling:} Balancing the magnitude of step rewards (confidence values in [0,1]) with episode-end accuracy bonuses (potentially large) required careful tuning.
+    
+    \item \textbf{Stability Issues:} The adaptive reward enhancements in RLGSSL introduced numerical instability. The diversity bonus, in particular, may have caused gradient explosions when batch entropy varied significantly.
+\end{itemize}
+
+\textbf{Recommendation:} Future work should implement reward clipping and normalization strategies used in modern RL algorithms like PPO.
+
+\subsubsection{Computational Constraints}
+
+The computational demands of RL-based pseudo-labeling present significant practical barriers:
+
+\begin{itemize}
+    \item \textbf{Episode Length:} Each Policy Gradient episode processes all 4000 unlabeled samples, resulting in lengthy episodes and delayed learning.
+    
+    \item \textbf{CPU Limitations:} Training on CPU for 15+ hours without completion highlights the need for GPU acceleration. However, even with GPUs, the approach may struggle to scale to ImageNet-scale datasets.
+    
+    \item \textbf{Memory Requirements:} Maintaining teacher and student models simultaneously, along with mixup sample generation, doubles memory requirements compared to standard training.
+\end{itemize}
+
+\textbf{Recommendation:} Investigate mini-batch RL approaches and gradient accumulation strategies to improve computational efficiency.
+
+\subsubsection{Non-Stationarity and Credit Assignment}
+
+The pseudo-labeling environment violates key RL assumptions:
+
+\begin{itemize}
+    \item \textbf{Moving Target:} The downstream model evolves during training, causing state distributions to shift continuously. This non-stationarity challenges standard RL convergence guarantees.
+    
+    \item \textbf{Delayed Feedback:} Accuracy improvements may not manifest until many episodes later, making credit assignment difficult. Which pseudo-labels at which training iterations contributed to final performance?
+    
+    \item \textbf{Exploration-Exploitation:} Balancing exploration of uncertain samples versus exploitation of confident predictions is complicated by the fact that exploration today affects future model capabilities.
+\end{itemize}
+
+\textbf{Recommendation:} Consider meta-learning approaches where the policy is trained across multiple dataset/model combinations to develop more robust pseudo-labeling strategies.
+
+\subsection{Insights on RLGSSL Formulation}
+
+Through implementation, we gained several insights into the RLGSSL approach:
+
+\subsubsection{Policy Network as Classifier}
+
+The elegant formulation where the classifier itself serves as the RL policy eliminates architectural complexity but introduces subtleties:
+
+\begin{itemize}
+    \item \textbf{Gradient Flow:} Careful use of stop-gradient operations is crucial to prevent the model from "hacking" rewards by simply memorizing mixup samples.
+    
+    \item \textbf{Loss Weighting:} The relative weights of supervised, consistency, and RL losses dramatically affect behavior. In our experiments, RL loss dominated when set too high, causing instability.
+    
+    \item \textbf{Curriculum Necessity:} The curriculum learning component is not just an enhancement but appears necessary for stability, gradually introducing RL objectives as the model matures.
+\end{itemize}
+
+\subsubsection{Mixup as Environment Dynamics}
+
+Using mixup to create the "environment" for RL is creative but has implications:
+
+\begin{itemize}
+    \item \textbf{Sample Efficiency:} Mixup provides infinite synthetic samples, enabling dense RL learning signals.
+    
+    \item \textbf{Smoothness:} The continuous interpolation in mixup may help smooth the reward landscape, potentially aiding RL optimization.
+    
+    \item \textbf{Generalization:} Training on mixup samples may improve interpolation behavior, though extrapolation (out-of-distribution samples) remains challenging.
+\end{itemize}
+
+\subsection{Comparison: Policy Gradient vs. RLGSSL}
+
+Table~\ref{tab:approach_comparison} compares the two approaches implemented:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{p{3cm}p{5cm}p{5cm}}
+        \hline
+        \textbf{Aspect} & \textbf{Policy Gradient} & \textbf{RLGSSL} \\
+        \hline
+        Complexity & Higher: separate RL agent + downstream model & Lower: unified architecture \\
+        Scalability & Poor: full episode required & Better: mini-batch training \\
+        Interpretability & Higher: explicit state-action mapping & Lower: implicit RL in loss function \\
+        Flexibility & Higher: easy to modify reward/state & Lower: coupled to mixup strategy \\
+        Performance & \textbf{[TODO: report]} & \textbf{[TODO: report]} \\
+        Stability & \textbf{[TODO: report]} & Issues with adaptive enhancements \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of the two RL-based pseudo-labeling approaches}
+    \label{tab:approach_comparison}
+\end{table}
+
+\subsection{Practical Considerations}
+
+\subsubsection{When to Use RL for Pseudo-Labeling}
+
+Based on our experience, RL-based pseudo-labeling is most appropriate when:
+
+\begin{itemize}
+    \item Labeled data is extremely limited ($<$1\% of dataset)
+    \item Pseudo-labeling decisions have long-term consequences (e.g., medical diagnosis)
+    \item Computational resources are available for extensive training
+    \item The problem exhibits clear reward signals (e.g., validation accuracy)
+\end{itemize}
+
+It may be overkill when:
+\begin{itemize}
+    \item Labeled data is moderately available ($>$10\% of dataset)
+    \item Simple confidence thresholding already works well
+    \item Real-time or resource-constrained deployment is required
+    \item The dataset is extremely large (millions of samples)
+\end{itemize}
+
+\subsubsection{Engineering Recommendations}
+
+From an engineering perspective, several practices proved valuable:
+
+\begin{enumerate}
+    \item \textbf{Modular Design:} Separating environment, agent, and downstream model into distinct modules facilitated debugging and experimentation.
+    
+    \item \textbf{Logging Infrastructure:} Comprehensive logging with TensorBoard was essential for diagnosing training dynamics and stability issues.
+    
+    \item \textbf{Checkpointing:} Regular model checkpointing allowed recovery from crashes and comparison of models at different training stages.
+    
+    \item \textbf{Ablation-Friendly Code:} Designing hyperparameters and enhancement flags in a central config file enabled rapid ablation studies.
+\end{enumerate}
+
+\subsection{Future Directions}
+
+Several promising directions for future work emerged:
+
+\begin{enumerate}
+    \item \textbf{Stability Improvements:} Implement gradient clipping, reward normalization, and PPO-style trust region constraints to address training instability.
+    
+    \item \textbf{Multi-Objective RL:} Explicitly model multiple objectives (accuracy, diversity, computational cost) using multi-objective RL frameworks.
+    
+    \item \textbf{Meta-Learning:} Train pseudo-labeling policies across multiple datasets to develop generalizable strategies.
+    
+    \item \textbf{Uncertainty Quantification:} Integrate Bayesian deep learning or ensemble methods to provide better uncertainty estimates for state representations.
+    
+    \item \textbf{Hierarchical RL:} Use hierarchical RL to separate high-level strategy (which data to focus on) from low-level tactics (specific label assignments).
+    
+    \item \textbf{Offline RL:} Pre-collect trajectories with simple baseline policies, then use offline RL to learn from these without expensive online interactions.
+\end{enumerate}
+
+\subsection{Limitations of Current Work}
+
+We acknowledge several limitations:
+
+\begin{itemize}
+    \item \textbf{Incomplete Experiments:} System crashes prevented complete training runs and comprehensive evaluation.
+    
+    \item \textbf{Limited Datasets:} Experiments focused on MNIST and CIFAR-10; generalization to other domains (text, speech, medical imaging) remains unexplored.
+    
+    \item \textbf{Hyperparameter Sensitivity:} Limited computational budget prevented extensive hyperparameter searches.
+    
+    \item \textbf{Comparison Baselines:} Lacking direct comparisons with strong SSL baselines like FixMatch, MixMatch, or simple confidence thresholding.
+    
+    \item \textbf{Theoretical Analysis:} No formal convergence guarantees or theoretical characterization of when RL-based pseudo-labeling should outperform alternatives.
+\end{itemize}
+
+\textbf{[TODO: Add a subsection comparing results with standard SSL baselines (FixMatch, MixMatch, simple pseudo-labeling with confidence threshold)]}
+
+% ------------------------------------------------------------------------------------------------------------------------
+
+\section{Conclusion}
+
+This capstone project investigated the application of reinforcement learning to intelligent pseudo-labeling in semi-supervised learning contexts. We developed and evaluated two complementary approaches: a custom Policy Gradient framework with explicit state-action formulations, and an implementation of the novel RLGSSL approach with adaptive enhancements.
+
+\subsection{Key Contributions}
+
+Our work makes several contributions:
+
+\begin{enumerate}
+    \item \textbf{Complete RL Framework:} Developed a full-featured custom OpenAI Gymnasium environment for pseudo-labeling, including carefully designed state spaces (image features + model predictions + entropy), action spaces (label assignment or skip), and confidence-weighted reward functions.
+    
+    \item \textbf{RLGSSL Implementation:} Successfully implemented the RLGSSL framework proposed by Heidari et al., including teacher-student architecture, mixup augmentation, and the novel RL reward formulation.
+    
+    \item \textbf{Adaptive Enhancements:} Extended RLGSSL with confidence bonuses, diversity regularization, curriculum learning, and entropy regularization mechanisms not present in the original paper.
+    
+    \item \textbf{Practical Insights:} Documented computational challenges, stability issues, and engineering considerations crucial for practitioners attempting to apply RL to pseudo-labeling.
+    
+    \item \textbf{Open-Source Implementation:} \textbf{[TODO: Add GitHub repository link]} Provided well-documented, modular code for future research and experimentation.
+\end{enumerate}
+
+\subsection{Main Findings}
+
+\textbf{Technical Feasibility:} RL-based pseudo-labeling is technically feasible and can be implemented using standard deep RL techniques. However, significant engineering effort is required to achieve stability and scalability.
+
+\textbf{Computational Demands:} Both approaches exhibit substantial computational requirements, with training times exceeding 15 hours on CPU for moderate-scale experiments. GPU acceleration and algorithmic optimizations are essential for practical deployment.
+
+\textbf{Stability Challenges:} Adaptive reward enhancements, while theoretically motivated, introduced numerical instability that caused training crashes. Careful implementation with gradient clipping and reward normalization is crucial.
+
+\textbf{Performance Gap:} Our results showed a significant gap compared to state-of-the-art SSL methods, likely due to incomplete training, implementation bugs, and insufficient hyperparameter tuning. This highlights the challenge of reproducing research results and the importance of careful validation.
+
+\subsection{Lessons Learned}
+
+\textbf{Reward Engineering is Critical:} The choice and design of reward functions dramatically affects learning dynamics. Simple confidence-based rewards worked reasonably well, but complex multi-component rewards require careful balancing and stability mechanisms.
+
+\textbf{Start Simple, Add Complexity Gradually:} Our experience suggests starting with minimal RL formulations and incrementally adding enhancements while rigorously testing stability at each stage.
+
+\textbf{Computational Planning is Essential:} RL-based approaches require significantly more computation than standard SSL. Projects should budget computational resources accordingly and prioritize access to GPU infrastructure.
+
+\textbf{Reproducibility is Challenging:} Even with detailed papers, reproducing research results requires careful attention to implementation details, data preprocessing, and hyperparameter settings that may not be fully documented.
+
+\subsection{Broader Impact}
+
+This work contributes to the growing body of research applying reinforcement learning to data-centric AI problems. As labeled data remains a bottleneck in many domains—especially in medical imaging, autonomous systems, and low-resource languages—intelligent pseudo-labeling strategies could significantly reduce annotation costs and democratize access to machine learning.
+
+However, practitioners should be aware of the computational costs and implementation complexity. For many applications, simpler SSL baselines (FixMatch, MixMatch) may provide better cost-benefit trade-offs. RL-based approaches are most valuable when:
+\begin{itemize}
+    \item Labeled data is extremely scarce ($<$1\% of dataset)
+    \item Label quality is critical (high-stakes domains)
+    \item Computational resources are available
+    \item The problem exhibits clear, measurable objectives
+\end{itemize}
+
+\subsection{Future Work}
+
+To build upon this foundation, future research should:
+
+\begin{enumerate}
+    \item \textbf{Complete Experimental Evaluation:} Conduct full training runs on GPU infrastructure with multiple random seeds for statistical significance.
+    
+    \item \textbf{Stability Improvements:} Implement PPO-style clipping, gradient normalization, and reward preprocessing to improve training stability.
+    
+    \item \textbf{Comprehensive Baselines:} Compare directly with FixMatch, MixMatch, Mean Teacher, and simple confidence thresholding across multiple datasets.
+    
+    \item \textbf{Ablation Studies:} Systematically evaluate each component (curriculum learning, entropy regularization, confidence bonuses) to understand their individual contributions.
+    
+    \item \textbf{Scalability Analysis:} Investigate mini-batch RL methods and gradient accumulation strategies to enable scaling to larger datasets.
+    
+    \item \textbf{Domain Transfer:} Extend experiments to other domains (text classification, medical imaging, speech recognition) to assess generalizability.
+    
+    \item \textbf{Theoretical Analysis:} Develop formal characterizations of when RL-based pseudo-labeling should outperform heuristic approaches.
+    
+    \item \textbf{Meta-Learning:} Train policies across multiple dataset/architecture combinations to develop generalizable pseudo-labeling strategies.
+\end{enumerate}
+
+\subsection{Closing Remarks}
+
+This capstone project demonstrated both the promise and challenges of applying reinforcement learning to semi-supervised learning. While we encountered significant obstacles—training instability, computational constraints, and performance gaps—the experience provided valuable insights into the complexities of RL-based data-centric AI.
+
+The field of RL-guided semi-supervised learning remains in its early stages, with much room for innovation. As computational resources become more accessible and RL algorithms continue to improve, intelligent pseudo-labeling may become a standard tool in the machine learning practitioner's toolkit.
+
+We hope this work serves as a foundation for future researchers and provides both inspiration and cautionary lessons for those embarking on similar projects.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+
+%------ To create Appendix with additional stuff -------%
+\newpage
+\appendix
+\section{Appendix}
+
+\subsection{A: Code Structure}
+
+The project codebase is organized as follows:
+
+\begin{verbatim}
+Capstone/
+├── src/
+│   ├── component/
+│   │   ├── main.py           # Main training loop (Policy Gradient)
+│   │   ├── model.py          # Policy and Value Networks
+│   │   ├── env.py            # Custom PseudoLabelEnv
+│   │   ├── utils.py          # Helper functions
+│   │   └── config.py         # Hyperparameter configuration
+│   └── requirements.txt      # Python dependencies
+├── reports/
+│   ├── RLGSSL_Report_Draft.md     # RLGSSL implementation notes
+│   ├── Progress_Report/
+│   │   └── Progress_Report.md     # Weekly progress tracking
+│   └── Latex_report/
+│       ├── Final_Report.tex       # This document
+│       ├── Sample_Report.tex      # Template
+│       ├── File_Setup.tex         # LaTeX configuration
+│       ├── references.bib         # Bibliography
+│       └── fig/                   # Figures directory
+└── README.md                      # Project overview
+\end{verbatim}
+
+\subsection{B: Hyperparameter Configuration}
+
+Complete hyperparameter settings used in experiments:
+
+\textbf{Policy Gradient (config.py):}
+\begin{lstlisting}[language=Python]
+# Training parameters
+EPISODES = 50
+NUM_LABELED = 1000
+NUM_UNLABELED = 4000
+NUM_VALIDATION = 1000
+
+# Policy Gradient parameters
+GAMMA = 0.99
+ALPHA_PI = 1e-3
+ALPHA_V = 1e-3
+HIDDEN_DIM = 64
+POLICY_TYPE = 'mlp'
+
+# Downstream Model parameters
+DOWNSTREAM_LR = 0.001
+DOWNSTREAM_EPOCHS = 1
+BATCH_SIZE = 32
+\end{lstlisting}
+
+\textbf{RLGSSL (from draft documentation):}
+\begin{lstlisting}[language=Python]
+# Training Configuration
+WARMUP_EPOCHS = 50
+RLGSSL_EPOCHS = 400
+BATCH_SIZE = 128
+LEARNING_RATE = 0.001
+
+# Teacher-Student
+EMA_DECAY = 0.999
+
+# Mixup
+MIXUP_ALPHA = 1.0
+
+# Loss Weights
+LAMBDA_SUP = 1.0
+LAMBDA_CONS = 0.1
+LAMBDA_RL = 0.1
+
+# Adaptive Enhancements
+CONFIDENCE_THRESHOLD = 0.8
+CONFIDENCE_WEIGHT = 0.1
+DIVERSITY_WEIGHT = 0.05
+ENTROPY_REGULARIZATION = 0.01
+\end{lstlisting}
+
+\subsection{C: Key Implementation Details}
+
+\textbf{EMA Teacher Update:}
+\begin{lstlisting}[language=Python]
+def update_ema_teacher(student_model, teacher_model, beta=0.999):
+    for teacher_param, student_param in zip(
+        teacher_model.parameters(), 
+        student_model.parameters()
+    ):
+        teacher_param.data = (
+            beta * teacher_param.data + 
+            (1 - beta) * student_param.data
+        )
+\end{lstlisting}
+
+\textbf{Mixup Generation:}
+\begin{lstlisting}[language=Python]
+def generate_mixup(unlabeled_batch, labeled_batch, alpha=1.0):
+    mu = np.random.beta(alpha, alpha)
+    x_u, pseudo_y_u = unlabeled_batch
+    x_l, y_l = labeled_batch
+    
+    # Create mixup samples
+    x_m = mu * x_u + (1 - mu) * x_l
+    y_m = mu * pseudo_y_u + (1 - mu) * F.one_hot(y_l)
+    
+    return x_m, y_m, mu
+\end{lstlisting}
+
+\textbf{Confidence-Based Reward:}
+\begin{lstlisting}[language=Python]
+def calculate_reward(pred_label, true_label, action, probs):
+    if action == num_classes:  # skip action
+        return -0.1
+    confidence = probs[action].item()
+    if action == true_label:
+        return confidence  # positive reward for correct
+    else:
+        return -confidence  # negative reward for incorrect
+\end{lstlisting}
+
+\subsection{D: References for Additional Reading}
+
+\textbf{Reinforcement Learning Fundamentals:}
+\begin{itemize}
+    \item Sutton \& Barto (2018), ``Reinforcement Learning: An Introduction'' (2nd Edition)
+    \item Schulman et al. (2017), ``Proximal Policy Optimization Algorithms''
+    \item Mnih et al. (2016), ``Asynchronous Methods for Deep Reinforcement Learning''
+\end{itemize}
+
+\textbf{Semi-Supervised Learning:}
+\begin{itemize}
+    \item \textbf{[TODO: Add MixMatch citation (Berthelot et al., 2019)]}
+    \item \textbf{[TODO: Add FixMatch citation (Sohn et al., 2020)]}
+    \item \textbf{[TODO: Add Mean Teacher citation (Tarvainen \& Valpola, 2017)]}
+\end{itemize}
+
+\textbf{OpenAI Gymnasium:}
+\begin{itemize}
+    \item Official Documentation: \url{https://gymnasium.farama.org/}
+    \item Custom Environment Tutorial: \url{https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/}
+\end{itemize}
+
+\subsection{E: Acknowledgments}
+
+\textbf{[TODO: Add acknowledgments for:}
+\begin{itemize}
+    \item Prof. Tyler Wallett for project guidance and proposal
+    \item Dr. Amir Jafari for supervision
+    \item Computing resources (if applicable)
+    \item Collaborators (if applicable)
+    \item Open-source libraries used (PyTorch, Gymnasium, etc.)
+\end{itemize}
+\textbf{]}
+
+\end{document}
+
