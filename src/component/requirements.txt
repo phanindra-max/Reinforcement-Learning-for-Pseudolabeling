@@ -16,22 +16,5 @@ seaborn
 tensorboard
 tqdm
 
-# Image processing (for data augmentation)
-pillow
-
-# Configuration and experiment management
-pyyaml
-omegaconf
-
 # Reinforcement learning utilities
 gymnasium
-
-# Development tools
-typing-extensions
-dataclasses
-
-# Optional: For advanced visualizations
-plotly
-
-# Testing
-pytest

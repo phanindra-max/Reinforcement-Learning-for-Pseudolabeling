@@ -7,70 +7,93 @@ import torch.optim as optim
 from config import *
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import accuracy_score
+from torchvision.models import resnet18, ResNet18_Weights
 
 # -----------------------------
-# Downstream Model Class
+# Downstream Model
 # -----------------------------
-class DownstreamModel(nn.Module):
-    """
-    A CNN-based classification model for MNIST digit recognition.
-
-    This model serves as the downstream task classifier that gets trained on
-    labeled data and pseudo-labeled data. It combines the neural network
-    architecture with training and evaluation methods.
-
-    Architecture:
-        - Conv2d(1->16, 5x5) + ReLU + MaxPool2d
-        - Conv2d(16->32, 5x5) + ReLU + MaxPool2d
-        - Fully Connected(1568->128) + ReLU
-        - Fully Connected(128->10)
-
-    Attributes:
-        device (torch.device): Device for computations
-        conv1, conv2 (nn.Conv2d): Convolutional layers
-        pool (nn.MaxPool2d): Pooling layer
-        fc1, fc2 (nn.Linear): Fully connected layers
-        optimizer (optim.Adam): Optimizer for training
-        criterion (nn.CrossEntropyLoss): Loss function
-    """
-
-    def __init__(self, device):
-        """
-        Initialize the downstream CNN model.
-
-        Args:
-            device (torch.device): Device to place model on (CPU or CUDA)
-        """
+class CNN_Classifier(nn.Module):
+    def __init__(self, input_shape, num_classes):
         super().__init__()
+        self.input_shape = input_shape
+        input_channels = input_shape[0]
+
+        self.features = nn.Sequential(
+            nn.Conv2d(in_channels=input_channels, out_channels=32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)))
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=128, out_features=num_classes))
+    def forward(self, x):
+        if x.dim() == 2:
+            x = x.view(x.size(0), *self.input_shape)
+        x = self.features(x)
+        return self.classifier(x)
+
+class MLP_Classifier(nn.Module):
+    def __init__(self, feature_dim, num_classes):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=feature_dim, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=num_classes))
+    def forward(self, x):
+        return self.net(x)
+
+class ResNet_Classifier(nn.Module):
+    def __init__(self, input_shape, num_classes, use_pretrained=True):
+        super().__init__()
+        input_channels = input_shape[0]
+        weights = ResNet18_Weights.IMAGENET1K_V1 if (use_pretrained and input_channels == 3) else None
+        backbone = resnet18(weights=weights)
+        backbone.conv1 = nn.Conv2d(input_channels, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        backbone.maxpool = nn.Identity()
+        backbone.fc = nn.Linear(in_features=backbone.fc.in_features, out_features=num_classes)
+        self.backbone = backbone
+        self.input_shape = input_shape
+
+    def forward(self, x):
+        if x.dim() == 2:
+            x = x.view(x.size(0), *self.input_shape)
+        return self.backbone(x)
+
+class DownstreamModel(nn.Module):
+    def __init__(self, model_name, input_shape, num_classes, feature_dim, device):
+        super().__init__()
+        self.model_name = model_name
+        self.input_shape = input_shape
+        self.num_classes = num_classes
+        self.feature_dim = feature_dim
         self.device = device
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2)
-        self.fc1 = nn.Linear(32 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 10)
+
+        if model_name == 'cnn':
+            self.backbone = CNN_Classifier(input_shape, num_classes)
+        elif model_name == 'mlp':
+            self.backbone = MLP_Classifier(feature_dim, num_classes)
+        elif model_name == 'resnet18':
+            self.backbone = ResNet_Classifier(input_shape, num_classes)
+        else:
+            raise ValueError(f"Unknown model name: {model_name}")
+
         self.optimizer = optim.Adam(self.parameters(), lr=downstream_lr)
         self.criterion = nn.CrossEntropyLoss()
         self.to(device)
 
     def forward(self, x):
-        """
-        Forward pass through the network.
+        if self.model_name in ('cnn', 'resnet18') and x.dim() == 2:
+            x = x.view(x.size(0), *self.input_shape)
+        return self.backbone(x)
 
-        Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, 784) or (batch_size, 1, 28, 28)
-
-        Returns:
-            torch.Tensor: Logits for each class, shape (batch_size, 10)
-        """
-        x = x.view(-1, 1, 28, 28)
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 32 * 7 * 7)  # Flatten
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-    def train_model(self, labeled_data, pseudo_labeled_data, epochs=downstream_epocs):
+    def train_model(self, labeled_data, pseudo_labeled_data, epochs=downstream_epochs):
         """
         Train the model on labeled and pseudo-labeled data.
 
@@ -80,7 +103,7 @@ class DownstreamModel(nn.Module):
         Args:
             labeled_data (tuple): Tuple of (features, labels) for labeled samples
             pseudo_labeled_data (list): List of (feature, label) tuples for pseudo-labeled samples
-            epochs (int, optional): Number of training epochs. Defaults to downstream_epocs from config.
+            epochs (int, optional): Number of training epochs. Defaults to downstream_epochs from config.
         """
         x_train, y_train = labeled_data
 
@@ -120,10 +143,10 @@ class DownstreamModel(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            x_data = x_data.to(self.device)
-            y_data = y_data.to(self.device)
-            preds = torch.argmax(self(x_data), dim=1)
-            return accuracy_score(y_data.cpu(), preds.cpu())
+            logits = self(x_data.to(self.device))
+            preds = torch.argmax(logits, dim=1).cpu().numpy().astype(int)
+            labels = y_data.cpu().numpy().astype(int)
+            return accuracy_score(labels, preds)
 
     def get_predictions(self, x_data):
         """
@@ -159,6 +182,23 @@ class DownstreamModel(nn.Module):
 
         torch.save(self.state_dict(), os.path.join(save_dir, f'{name}.pth'))
         print(f"Downstream model saved to {save_dir}/{name}.pth")
+
+def init_downstream_model(model_name, input_shape, num_classes, feature_dim, device, labeled_data, val_data):
+    print(f"\n{'=' * 70}")
+    print("DOWNSTREAM MODEL INITIALIZATION")
+    print(f"{'=' * 70}")
+    print(f"Initializing downstream model: {model_name}\n")
+    model = DownstreamModel(model_name, input_shape, num_classes, feature_dim, device)
+    model.train_model(labeled_data, [])
+    initial_state = model.state_dict()
+    baseline_acc = model.evaluate_model(*val_data)
+    return model, initial_state, baseline_acc
+
+def evaluate_on_testset(model, x_data, y_data):
+    ##"""Evaluate on held-out test set."""
+    test_accuracy = model.evaluate_model(x_data, y_data)
+    print(f"Test Accuracy: {test_accuracy * 100:.4f}%")
+    return test_accuracy
 
 class PolicyNetwork(nn.Module):
     '''

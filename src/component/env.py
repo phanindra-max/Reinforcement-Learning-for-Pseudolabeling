@@ -1,68 +1,39 @@
 import gymnasium as gym
 import torch
 import numpy as np
+from model import init_downstream_model
 from utils import load_source_data
-from model import DownstreamModel
+from config import *
 
 # -----------------------------
 # Main Environment Class
 # -----------------------------
 class PseudoLabelEnv(gym.Env):
-    """
-    A reinforcement learning environment for pseudo-labeling unlabeled data.
-    
-    This environment allows an RL agent to decide whether to assign pseudo-labels
-    to unlabeled images or skip them. The agent is rewarded based on the confidence
-    and correctness of its labeling decisions.
-    
-    Attributes:
-        device (torch.device): Device for tensor computations (CPU or CUDA)
-        labeled_x (torch.Tensor): Features of labeled training data
-        labeled_y (torch.Tensor): Labels of labeled training data
-        unlabeled_x (torch.Tensor): Features of unlabeled data
-        unlabeled_y_true (torch.Tensor): True labels of unlabeled data (for evaluation)
-        val_x (torch.Tensor): Features of validation data
-        val_y (torch.Tensor): Labels of validation data
-        num_classes (int): Number of classification classes
-        feature_dim (int): Dimensionality of input features
-        observation_space (gym.spaces.Box): State space definition
-        action_space (gym.spaces.Discrete): Action space definition
-        downstream_model (DownstreamModel): Classification model
-        baseline_accuracy (float): Initial validation accuracy in an Episode
-    """
 
     def __init__(self, num_labeled, num_unlabeled, num_validation):
-        """
-        Initialize the pseudo-labeling environment.
-        Args:
-            num_labeled (int): Number of labeled samples to use for initial training
-            num_unlabeled (int): Number of unlabeled samples for pseudo-labeling
-            num_validation (int): Number of validation samples for evaluation
-        """
-
         super().__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
+        self.use_true_labels = use_true_labels
 
-        labeled_data, unlabeled_data, validation_data = load_source_data(num_labeled, num_unlabeled, num_validation)
+        labeled_x, labeled_y, unlabeled_x, unlabeled_y, val_x, val_y, test_x, test_y, dataset_info = load_source_data(data_source, num_labeled, num_unlabeled, num_validation)
 
-        self.labeled_x, self.labeled_y, self.unlabeled_x, self.unlabeled_y_true = \
-            labeled_data[0].to(self.device), labeled_data[1].to(self.device), \
-            unlabeled_data[0].to(self.device), unlabeled_data[1].to(self.device)
-        self.val_x, self.val_y = validation_data[0].to(self.device), validation_data[1].to(self.device)
+        self.labeled_x, self.labeled_y = labeled_x.to(self.device), labeled_y.to(self.device)
+        self.unlabeled_x, self.unlabeled_y = unlabeled_x.to(self.device), unlabeled_y.to(self.device)
+        self.val_x, self.val_y = val_x.to(self.device), val_y.to(self.device)
+        self.test_x, self.test_y = test_x.to(self.device), test_y.to(self.device)
 
-        self.num_classes = 10
-        self.feature_dim = self.labeled_x.shape[1]
+        self.num_classes = dataset_info['num_classes']
+        self.feature_dim = dataset_info['feature_dim']
+        self.input_shape = dataset_info['input_shape']
+
         state_dim = self.feature_dim + self.num_classes + 1
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,))
         self.action_space = gym.spaces.Discrete(self.num_classes + 1)
 
         # Initialize and train downstream model once
-        self.downstream_model = DownstreamModel(self.device)
-        self.downstream_model.train_model((self.labeled_x, self.labeled_y), [])
-        self.initial_model_state = self.downstream_model.state_dict()  # Save initial weights
-        self.baseline_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
+        self.downstream_model, self.initial_model_state, self.baseline_accuracy = init_downstream_model(model_name, self.input_shape, self.num_classes, self.feature_dim, self.device, (self.labeled_x, self.labeled_y), (self.val_x, self.val_y))
         self.baseline_error_rate = 1.0 - self.baseline_accuracy
-    
+
     # -----------------------------
     # RESET
     # -----------------------------
@@ -86,7 +57,7 @@ class PseudoLabelEnv(gym.Env):
 
         perm = torch.randperm(self.unlabeled_x.size(0))
         self.unlabeled_x = self.unlabeled_x[perm]
-        self.unlabeled_y_true = self.unlabeled_y_true[perm]
+        self.unlabeled_y = self.unlabeled_y[perm]
 
         # Restore the downstream model to initial weights
         self.downstream_model.load_state_dict(self.initial_model_state)
@@ -102,14 +73,16 @@ class PseudoLabelEnv(gym.Env):
         """
         img_idx = self.current_idx
         reward = 0.0
-      
-        # Handle action (labeling or skipping)
-        if action < self.num_classes:
-            self.newly_pseudo_labeled_data.append(
-                (self.unlabeled_x[img_idx], torch.tensor(action, device=self.device))
-            )            
-        else:  # Action is skip (action == num_classes)
-            reward = self.calculate_reward(0.0, 0.0, skip_penalty=True)
+
+        if self.use_true_labels:
+            chosen_label = self.unlabeled_y[img_idx]
+            self.newly_pseudo_labeled_data.append((self.unlabeled_x[img_idx], chosen_label))
+        else:
+            if action < self.num_classes:
+                chosen_label = torch.tensor(action, device=self.device)
+                self.newly_pseudo_labeled_data.append((self.unlabeled_x[img_idx], chosen_label))
+            else: # skipped
+                reward += self.calculate_reward(0.0, 0.0, skip_penalty=True)
 
         if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 32)):
           

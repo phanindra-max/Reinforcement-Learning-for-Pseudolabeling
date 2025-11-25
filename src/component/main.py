@@ -1,5 +1,5 @@
 from env import PseudoLabelEnv
-from model import PolicyGradient
+from model import PolicyGradient, evaluate_on_testset
 from tqdm import tqdm
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
@@ -36,6 +36,9 @@ def main():
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
+    print(f"{'=' * 70}")
+    print("TRAINING LOOP")
+    print(f"{'=' * 70}")
     print("Starting training with PyTorch agent...")
     for episode in tqdm(range(episodes), desc="Training Progress"):
         state, info = env.reset()
@@ -92,10 +95,15 @@ def main():
         writer.add_scalar("Loss/policy", policy_loss, episode)
         writer.add_scalar("Loss/Value", value_loss, episode)
 
+    print(f"{'=' * 70}")
+    print("FINAL RESULTS")
+    print(f"{'=' * 70}")
+    test_accuracy = evaluate_on_testset(env.downstream_model, env.test_x, env.test_y)
+    writer.add_scalar("Accuracy/Test", test_accuracy * 100, episodes)
+
     env.close()
     writer.close()
     print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
-
 
 if __name__ == "__main__":
     main()
