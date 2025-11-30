@@ -54,6 +54,19 @@ def load_source_data(data_source, num_labeled, num_unlabeled, num_validation):
         train_data = train_data.permute(0, 3, 1, 2)
         test_data = test_data.permute(0, 3, 1, 2)
 
+    elif data_source.lower() == "svhn":
+        # Load Train Dataset
+        dataset_train = datasets.SVHN(root="./data", split="train", download=True, transform=transform)
+        train_data = torch.from_numpy(dataset_train.data).float() / 255.0
+        train_targets = torch.tensor(dataset_train.labels)
+        # Load Test Dataset
+        dataset_test = datasets.SVHN(root="./data", split="test", download=True, transform=transform)
+        test_data = torch.from_numpy(dataset_test.data).float() / 255.0
+        test_y = torch.tensor(dataset_test.labels)
+        # (N, H, W, C) → (N, C, H, W)
+        train_data = train_data.permute(0, 3, 1, 2)
+        test_data = test_data.permute(0, 3, 1, 2)
+
     else:
         raise ValueError(f"Invalid dataset name: {data_source}")
 
