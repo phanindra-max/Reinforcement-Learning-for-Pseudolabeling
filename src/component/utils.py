@@ -67,6 +67,9 @@ def load_source_data(data_source, num_labeled, num_unlabeled, num_validation):
         'feature_dim': feature_dim,
         'input_shape': input_shape
     }
+    # Data size validatiosn before split
+    if(len(train_data) < num_labeled + num_unlabeled + num_validation):
+        raise ValueError(f"Not enough data for the requested split. Please reduce the number of labeled/unlabeled/validation samples so that they add up to {len(train_data)}.")
 
     # Data Split
     data_temp, unlabeled_data, targets_temp, unlabeled_y = train_test_split(train_data, train_targets, test_size = num_unlabeled, stratify=train_targets, random_state=42)

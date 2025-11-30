@@ -9,7 +9,7 @@ data_source = 'mnist'
 model_name = 'cnn'
 #---------------- Central config for hyperparameters--------------
 # Training parameters
-episodes = 50
+episodes = 100
 num_labeled = 18000
 num_unlabeled = 40000
 num_validation = 2000

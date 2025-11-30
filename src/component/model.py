@@ -207,12 +207,12 @@ class DownstreamModel(nn.Module):
 
         Args:
             name (str, optional): Base name for saved model file. Defaults to 'downstream'.
-            save_dir (str, optional): Directory to save model. Defaults to 'src/trained_models'
+            save_dir (str, optional): Directory to save model. Defaults to 'src/trained_models_<model>_<dataset>'
                                      relative to the current file's directory.
         """
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            save_dir = os.path.join(base_path, 'trained_models')
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
 
         os.makedirs(save_dir, exist_ok=True)
 
@@ -392,11 +392,11 @@ class PolicyGradient:
         
         Args:
             name: Base name for saved models
-            save_dir: Directory to save models (default: src/trained_models)
+            save_dir: Directory to save models (default: src/trained_models_<model>_<dataset>)
         '''
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            save_dir = os.path.join(base_path, 'trained_models')
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
         
         os.makedirs(save_dir, exist_ok=True)
         
@@ -410,11 +410,11 @@ class PolicyGradient:
         
         Args:
             name: Base name for saved models
-            save_dir: Directory to load models from (default: src/trained_models)
+            save_dir: Directory to load models from (default: src/trained_models_<model>_<dataset>)
         '''
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            save_dir = os.path.join(base_path, 'trained_models')
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
         
         self.pi.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_policy.pth')))
         self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth')))
