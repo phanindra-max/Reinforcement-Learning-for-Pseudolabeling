@@ -26,14 +26,15 @@ class PseudoLabelEnv(gym.Env):
         self.feature_dim = dataset_info['feature_dim']
         self.input_shape = dataset_info['input_shape']
 
-        state_dim = self.feature_dim + self.num_classes + 1
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,))
-        self.action_space = gym.spaces.Discrete(self.num_classes + 1)
-
         # Initialize and train downstream model once
         self.downstream_model, self.initial_model_state, self.baseline_accuracy = init_downstream_model(model_name, self.input_shape, self.num_classes, self.feature_dim, self.device, (self.labeled_x, self.labeled_y), (self.val_x, self.val_y))
         self.baseline_error_rate = 1.0 - self.baseline_accuracy
 
+        # state_dim = self.feature_dim + self.num_classes + 1
+        example_feats = self.downstream_model.extract_features(self.labeled_x[:1]).shape[1]
+        state_dim = example_feats + self.num_classes + 1
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(state_dim,))
+        self.action_space = gym.spaces.Discrete(self.num_classes + 1)
     # -----------------------------
     # RESET
     # -----------------------------
@@ -84,7 +85,7 @@ class PseudoLabelEnv(gym.Env):
             else: # skipped
                 reward += self.calculate_reward(0.0, 0.0, skip_penalty=True)
 
-        if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 32)):
+        if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 512)):
           
             # Store the baseline error rate for comparison
             old_error_rate = self.baseline_error_rate
@@ -162,25 +163,41 @@ class PseudoLabelEnv(gym.Env):
     # -----------------------------
     # Get Next State
     # -----------------------------
+    # def get_next_state(self):
+    #     """
+    #     Construct the state observation for the current unlabeled sample.
+    #
+    #     Returns:
+    #         np.ndarray: State vector containing concatenation of:
+    #             - Image features (784-dim)
+    #             - Model's predicted probability distribution (num_classes-dim)
+    #             - Prediction entropy (1-dim)
+    #             Returns zero vector if all samples have been processed.
+    #     """
+    #     if self.current_idx >= len(self.unlabeled_x):
+    #         return np.zeros(self.observation_space.shape)
+    #
+    #     img_data = self.unlabeled_x[self.current_idx]
+    #     preds = self.downstream_model.get_predictions(img_data.unsqueeze(0))
+    #     entropy = -torch.sum(preds * torch.log(preds + 1e-9))
+    #
+    #     state = torch.cat([img_data, preds, entropy.unsqueeze(0)])
+    #     return state.cpu().numpy()
+
     def get_next_state(self):
         """
-        Construct the state observation for the current unlabeled sample.
-        
-        Returns:
-            np.ndarray: State vector containing concatenation of:
-                - Image features (784-dim)
-                - Model's predicted probability distribution (num_classes-dim)
-                - Prediction entropy (1-dim)
-                Returns zero vector if all samples have been processed.
+        Construct the state observation using extracted image features.
         """
         if self.current_idx >= len(self.unlabeled_x):
             return np.zeros(self.observation_space.shape)
-        
-        img_data = self.unlabeled_x[self.current_idx]
-        preds = self.downstream_model.get_predictions(img_data.unsqueeze(0))
-        entropy = -torch.sum(preds * torch.log(preds + 1e-9))
-        
-        state = torch.cat([img_data, preds, entropy.unsqueeze(0)])
+
+        with torch.no_grad():
+            img_data = self.unlabeled_x[self.current_idx]
+            feats = self.downstream_model.extract_features(img_data.unsqueeze(0)).squeeze(0)
+            preds = self.downstream_model.get_predictions(img_data.unsqueeze(0))
+            entropy = -torch.sum(preds * torch.log(preds + 1e-9))
+            state = torch.cat([feats, preds, entropy.unsqueeze(0)])
+
         return state.cpu().numpy()
 
     def render(self):

@@ -33,7 +33,7 @@ def main():
 
     # Initialize the best error rate tracking
     best_error_rate = float('inf')
-    save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
+    save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"trained_models_{model_name}_{data_source}")
     os.makedirs(save_dir, exist_ok=True)
 
     print(f"{'=' * 70}")

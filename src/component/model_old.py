@@ -148,57 +148,21 @@ class DownstreamModel(nn.Module):
             labels = y_data.cpu().numpy().astype(int)
             return accuracy_score(labels, preds)
 
-    # def get_predictions(self, x_data):
-    #     """
-    #     Get probability distribution over classes for input data.
-    #
-    #     Args:
-    #         x_data (torch.Tensor): Input features, shape (batch_size, 784)
-    #
-    #     Returns:
-    #         torch.Tensor: Softmax probabilities for each class, shape (batch_size, 10)
-    #                      or (10,) if batch_size=1
-    #     """
-    #     self.eval()
-    #     with torch.no_grad():
-    #         x_data = x_data.to(self.device)
-    #         logits = self(x_data)
-    #         return F.softmax(logits, dim=1).squeeze()
-
-    def extract_features(self, x):
-        if x.dim() == 2:
-            x = x.view(x.size(0), *self.input_shape)
-        if self.model_name == 'cnn':
-            feats = self.backbone.features(x)
-            return feats.view(feats.size(0), -1)
-        if self.model_name == 'resnet18':
-            b = self.backbone.backbone
-            x = b.conv1(x);
-            x = b.bn1(x);
-            x = b.relu(x);
-            x = b.maxpool(x)
-            x = b.layer1(x);
-            x = b.layer2(x);
-            x = b.layer3(x);
-            x = b.layer4(x)
-            x = b.avgpool(x)
-            return torch.flatten(x, 1)
-            # mlp fallback just flattens
-        return x.view(x.size(0), -1)
-
-    def predict_from_features(self, feats):
-        if self.model_name == 'cnn':
-            return self.backbone.classifier(feats)
-        if self.model_name == 'resnet18':
-            return self.backbone.backbone.fc(feats)
-        return self.backbone.net(feats)
-
     def get_predictions(self, x_data):
-        """Probability distribution using extracted features."""
+        """
+        Get probability distribution over classes for input data.
+
+        Args:
+            x_data (torch.Tensor): Input features, shape (batch_size, 784)
+
+        Returns:
+            torch.Tensor: Softmax probabilities for each class, shape (batch_size, 10)
+                         or (10,) if batch_size=1
+        """
         self.eval()
         with torch.no_grad():
-            feats = self.extract_features(x_data.to(self.device))
-            logits = self.predict_from_features(feats)
+            x_data = x_data.to(self.device)
+            logits = self(x_data)
             return F.softmax(logits, dim=1).squeeze()
 
     def save_model(self, name='downstream', save_dir=None):
