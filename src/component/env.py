@@ -20,7 +20,6 @@ class PseudoLabelEnv(gym.Env):
         self.labeled_x, self.labeled_y = labeled_x.to(self.device), labeled_y.to(self.device)
         self.unlabeled_x, self.unlabeled_y = unlabeled_x.to(self.device), unlabeled_y.to(self.device)
         self.val_x, self.val_y = val_x.to(self.device), val_y.to(self.device)
-        self.test_x, self.test_y = test_x.to(self.device), test_y.to(self.device)
 
         self.num_classes = dataset_info['num_classes']
         self.feature_dim = dataset_info['feature_dim']
@@ -55,6 +54,7 @@ class PseudoLabelEnv(gym.Env):
         self.newly_pseudo_labeled_data = []
         self.all_pseudo_labeled_data = []
         self.episode_reward = 0.0
+        self.current_error_rate = self.baseline_error_rate
 
         perm = torch.randperm(self.unlabeled_x.size(0))
         self.unlabeled_x = self.unlabeled_x[perm]
@@ -88,15 +88,19 @@ class PseudoLabelEnv(gym.Env):
         if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 512)):
           
             # Store the baseline error rate for comparison
-            old_error_rate = self.baseline_error_rate
+            #old_error_rate = self.baseline_error_rate
+            old_error_rate = self.current_error_rate
           
             # Reset the model to the initial state (trained only on labeled data)
-            self.downstream_model.load_state_dict(self.initial_model_state)
-          
+            #self.downstream_model.load_state_dict(self.initial_model_state)
+
+            #combine all pseudolabels
+            combined_pseudo_labeled_data = self.all_pseudo_labeled_data + self.newly_pseudo_labeled_data
+
             # Train the model: Labeled data + CURRENT batch of pseudo-labels
             self.downstream_model.train_model(
                 (self.labeled_x, self.labeled_y),
-                self.newly_pseudo_labeled_data
+                combined_pseudo_labeled_data
             )
           
             # Evaluate new error rate
@@ -105,6 +109,7 @@ class PseudoLabelEnv(gym.Env):
           
             # Use separate method to calculate reward
             reward += self.calculate_reward(old_error_rate, new_error_rate)
+            self.current_error_rate = new_error_rate
           
             # Move current batch to all_pseudo_labeled_data
             self.all_pseudo_labeled_data.extend(self.newly_pseudo_labeled_data)
@@ -118,18 +123,18 @@ class PseudoLabelEnv(gym.Env):
       
         if terminated:
             # 1. Reset model to the baseline state
-            self.downstream_model.load_state_dict(self.initial_model_state)
-          
+            #self.downstream_model.load_state_dict(self.initial_model_state)
+
             # 2. Train the model on the ENTIRE set of pseudo-labels collected in the episode
-            if self.all_pseudo_labeled_data:
-                self.downstream_model.train_model(
-                    (self.labeled_x, self.labeled_y),
-                    self.all_pseudo_labeled_data
-                )
+            # if self.all_pseudo_labeled_data:
+            #     self.downstream_model.train_model(
+            #         (self.labeled_x, self.labeled_y),
+            #         self.all_pseudo_labeled_data
+            #     )
             # 3. Evaluate and report final metrics
-            new_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
-            new_error_rate = 1.0 - new_accuracy
-          
+            # new_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
+            # new_error_rate = 1.0 - new_accuracy
+
             info['new_accuracy'] = new_accuracy
             info['error_rate'] = new_error_rate
             info['final_reward'] = self.episode_reward

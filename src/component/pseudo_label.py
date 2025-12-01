@@ -3,7 +3,7 @@ import json
 import torch
 import numpy as np
 
-from config import data_source, model_name, gamma, alpha_pi, alpha_v, hidden_dim, policy_type, batch_size
+from config import *
 from model import DownstreamModel, PolicyGradient
 from utils import load_source_data
 
@@ -20,16 +20,12 @@ def build_state(model, img):
 
 def main():
     weights_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"trained_models_{model_name}_{data_source}")
-    downstream_ckpt = os.path.join(weights_dir, "best_downstream.pth")
     policy_name = "best_policy_gradient"
 
     # Load data using existing util; we only need unlabeled_x
-    _, _, unlabeled_x, _, _, _, _, _, dataset_info = load_source_data(
-        data_source=data_source,
-        num_labeled=0,
-        num_unlabeled=0,
-        num_validation=0
-    )
+    _, _, _, _, _, _, test_x, _, dataset_info = load_source_data(data_source=data_source,num_labeled=num_labeled, num_unlabeled=num_unlabeled, num_validation=num_validation)
+    unlabeled_x = test_x
+
     input_shape = dataset_info["input_shape"]
     num_classes = dataset_info["num_classes"]
     feature_dim = int(np.prod(input_shape))

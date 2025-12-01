@@ -1,5 +1,5 @@
 from env import PseudoLabelEnv
-from model import PolicyGradient, evaluate_on_testset
+from model import PolicyGradient
 from tqdm import tqdm
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
@@ -70,8 +70,7 @@ def main():
             final_reward = info['final_reward']
             new_accuracy = info['new_accuracy']
             error_rate = info['error_rate']
-            
-            writer.add_scalar("Reward/Final", final_reward, episode)
+
             # Log the sum of the trajectory rewards for comparison
             writer.add_scalar("Reward/Episode", sum(sampled_rewards), episode)
             
@@ -98,8 +97,6 @@ def main():
     print(f"{'=' * 70}")
     print("FINAL RESULTS")
     print(f"{'=' * 70}")
-    test_accuracy = evaluate_on_testset(env.downstream_model, env.test_x, env.test_y)
-    writer.add_scalar("Accuracy/Test", test_accuracy * 100, episodes)
 
     env.close()
     writer.close()

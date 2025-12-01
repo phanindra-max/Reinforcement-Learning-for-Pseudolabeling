@@ -219,6 +219,16 @@ class DownstreamModel(nn.Module):
         torch.save(self.state_dict(), os.path.join(save_dir, f'{name}.pth'))
         print(f"Downstream model saved to {save_dir}/{name}.pth")
 
+    def load_model(self, name='downstream', save_dir=None):
+        if save_dir is None:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
+        ckpt = os.path.join(save_dir, f'{name}.pth')
+        state = torch.load(ckpt, map_location=self.device)
+        self.load_state_dict(state)
+        self.eval()
+        print(f"Downstream model loaded from {ckpt}")
+
 def init_downstream_model(model_name, input_shape, num_classes, feature_dim, device, labeled_data, val_data):
     print(f"\n{'=' * 70}")
     print("DOWNSTREAM MODEL INITIALIZATION")
@@ -229,12 +239,6 @@ def init_downstream_model(model_name, input_shape, num_classes, feature_dim, dev
     initial_state = model.state_dict()
     baseline_acc = model.evaluate_model(*val_data)
     return model, initial_state, baseline_acc
-
-def evaluate_on_testset(model, x_data, y_data):
-    ##"""Evaluate on held-out test set."""
-    test_accuracy = model.evaluate_model(x_data, y_data)
-    print(f"Test Accuracy: {test_accuracy * 100:.4f}%")
-    return test_accuracy
 
 class PolicyNetwork(nn.Module):
     '''
@@ -416,7 +420,9 @@ class PolicyGradient:
             base_path = os.path.dirname(os.path.abspath(__file__))
             save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
         
-        self.pi.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_policy.pth')))
-        self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth')))
+        self.pi.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_policy.pth'), map_location=self.device))
+        self.pi.eval()
+        self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth'), map_location=self.device))
+        self.v.eval()
         print(f"Models loaded from {save_dir}")
 
