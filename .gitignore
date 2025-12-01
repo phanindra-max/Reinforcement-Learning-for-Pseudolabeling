@@ -33,6 +33,7 @@ checkpoints/
 *.pth
 *.tfevents.*
 *.pt
+*.json
 
 # Jupyter notebooks
 .ipynb_checkpoints/
