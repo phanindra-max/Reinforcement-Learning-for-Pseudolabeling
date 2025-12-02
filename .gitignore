@@ -26,8 +26,7 @@ cifar-10-python.tar.gz
 *.log
 logs/
 
-# Experiment artifacts
-experiments/
+# Experiment 
 checkpoints/
 *.pth
 *.pt
