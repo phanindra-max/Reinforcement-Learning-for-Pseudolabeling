@@ -2,16 +2,16 @@
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #---------------- Data configuration --------------
-# can accept "mnist" or "cifar10" or "cifar100" or "svnh"
+# can accept "mnist" or "cifar10" or "cifar100"
 data_source = 'mnist'
 #---------------- Downstream model configuration --------------
 # can accept "cnn" or "mlp" or "resnet18"
-model_name = 'cnn'
+model_name = 'mlp'
 #---------------- Central config for hyperparameters--------------
 # Training parameters
 episodes = 50
-num_labeled = 40000
-num_unlabeled = 8000
+num_labeled = 18000
+num_unlabeled = 40000
 num_validation = 2000
 # Policy Gradient parameters
 gamma = 0.99
@@ -21,7 +21,7 @@ hidden_dim = 64
 policy_type = 'mlp'
 # Downstream Model parameters
 downstream_lr = 0.001
-downstream_epochs = 3
+downstream_epochs = 1
 batch_size = 256
 # Flag that determines which experiment to run (retraining downstream model with pseudo-labels or true labels)
 use_true_labels = False

@@ -3,7 +3,6 @@ from torchvision import datasets, transforms
 from sklearn.model_selection import train_test_split
 from config import *
 
-
 def load_source_data(data_source, num_labeled, num_unlabeled, num_validation):
     print(f"{'=' * 70}")
     print("DEVICE CONFIGURATION")

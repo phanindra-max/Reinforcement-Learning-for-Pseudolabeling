@@ -72,8 +72,7 @@ def main():
             error_rate = info['error_rate']
 
             # Log the sum of the trajectory rewards for comparison
-            writer.add_scalar("Reward/Episode", sum(sampled_rewards), episode)
-            
+            writer.add_scalar("Reward/Episode", episode_reward, episode)
             writer.add_scalar("Accuracy/New", new_accuracy*100, episode)
             writer.add_scalar("Error Rate", error_rate*100, episode)
             
@@ -85,10 +84,8 @@ def main():
             if error_rate < best_error_rate:
                 best_error_rate = error_rate
                 print(f"New best error rate: {best_error_rate*100:.4f}% - Saving models...")
-                # Save downstream model
-                env.downstream_model.save_model(name='best_downstream', save_dir=save_dir)
-                # Save policy gradient models
-                agent.save_model(name='best_policy_gradient', save_dir=save_dir)
+                env.downstream_model.save_model(name='best_downstream', save_dir=save_dir) # Save downstream model
+                agent.save_model(name='best_policy_gradient', save_dir=save_dir) # Save policy gradient models
 
         # Log policy and value losses
         writer.add_scalar("Loss/policy", policy_loss, episode)

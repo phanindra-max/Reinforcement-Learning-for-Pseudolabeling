@@ -13,6 +13,24 @@ from torchvision.models import resnet18, ResNet18_Weights
 # Downstream Model
 # -----------------------------
 class CNN_Classifier(nn.Module):
+    """
+    Convolutional Neural Network classifier for image data.
+    Architecture:
+        - 3 convolutional blocks:
+            (Conv → ReLU → MaxPool),
+            (Conv → ReLU → MaxPool),
+            (Conv → ReLU → AdaptiveAvgPool)
+        - 1 fully-connected layer for classification.
+
+    Args:
+        input_shape (tuple): Shape of the input images (C, H, W).
+        num_classes (int): Number of output classes.
+
+    Attributes:
+        features (nn.Sequential): Convolutional feature extractor.
+        classifier (nn.Sequential): Fully-connected classifier head.
+    """
+
     def __init__(self, input_shape, num_classes):
         super().__init__()
         self.input_shape = input_shape
@@ -32,6 +50,7 @@ class CNN_Classifier(nn.Module):
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(in_features=128, out_features=num_classes))
+
     def forward(self, x):
         if x.dim() == 2:
             x = x.view(x.size(0), *self.input_shape)
@@ -39,6 +58,21 @@ class CNN_Classifier(nn.Module):
         return self.classifier(x)
 
 class MLP_Classifier(nn.Module):
+    """
+    Fully-connected Multi-Layer Perceptron classifier.
+
+    Architecture:
+        - Flatten layer
+        - Linear (feature_dim → 256) + ReLU
+        - Linear (256 → num_classes)
+
+    Args:
+        feature_dim (int): Flattened input dimensionality.
+        num_classes (int): Number of target classes.
+
+    Attributes:
+        net (nn.Sequential): MLP containing 2 linear layers and one activation layer.
+    """
     def __init__(self, feature_dim, num_classes):
         super().__init__()
         self.net = nn.Sequential(
@@ -46,10 +80,23 @@ class MLP_Classifier(nn.Module):
             nn.Linear(in_features=feature_dim, out_features=256),
             nn.ReLU(),
             nn.Linear(in_features=256, out_features=num_classes))
+
     def forward(self, x):
         return self.net(x)
 
 class ResNet_Classifier(nn.Module):
+    """
+    ResNet-18 based classifier adapted for small images.
+
+    Args:
+        input_shape (tuple): Input image shape (C, H, W).
+        num_classes (int): Number of output classes.
+        use_pretrained (bool): Load ImageNet pretrained weights when input is RGB.
+
+    Attributes:
+        backbone (nn.Module): Modified ResNet-18 network.
+    """
+
     def __init__(self, input_shape, num_classes, use_pretrained=True):
         super().__init__()
         input_channels = input_shape[0]
@@ -67,6 +114,25 @@ class ResNet_Classifier(nn.Module):
         return self.backbone(x)
 
 class DownstreamModel(nn.Module):
+    """
+    Wrapper for CNN, MLP, or ResNet downstream classifiers.
+    - Builds the chosen backbone (CNN/MLP/ResNet)
+    - Handles training on labeled + pseudo-labeled data
+    - Provides feature extraction, evaluation, prediction utilities
+
+    Args:
+        model_name (str): Model type ('cnn', 'mlp', 'resnet18').
+        input_shape (tuple): Shape of the input image.
+        num_classes (int): Number of classes.
+        feature_dim (int): Dimensionality of flattened input (for MLP).
+        device (torch.device): Device to place model on.
+
+    Attributes:
+        backbone (nn.Module): Selected classifier model.
+        optimizer (torch.optim.Optimizer): Optimizer for training.
+        criterion (nn.CrossEntropyLoss): Training loss function.
+    """
+
     def __init__(self, model_name, input_shape, num_classes, feature_dim, device):
         super().__init__()
         self.model_name = model_name
@@ -148,24 +214,14 @@ class DownstreamModel(nn.Module):
             labels = y_data.cpu().numpy().astype(int)
             return accuracy_score(labels, preds)
 
-    # def get_predictions(self, x_data):
-    #     """
-    #     Get probability distribution over classes for input data.
-    #
-    #     Args:
-    #         x_data (torch.Tensor): Input features, shape (batch_size, 784)
-    #
-    #     Returns:
-    #         torch.Tensor: Softmax probabilities for each class, shape (batch_size, 10)
-    #                      or (10,) if batch_size=1
-    #     """
-    #     self.eval()
-    #     with torch.no_grad():
-    #         x_data = x_data.to(self.device)
-    #         logits = self(x_data)
-    #         return F.softmax(logits, dim=1).squeeze()
-
     def extract_features(self, x):
+        """
+        Extract intermediate feature embeddings from the backbone model.
+        - CNN: Returns flattened output of the final convolutional block.
+        - ResNet-18: Manually runs the forward pass up to the global average pool, then flattens the pooled feature map.
+        - MLP: Simply flattens the input tensor, since no feature extractor exists.
+        """
+
         if x.dim() == 2:
             x = x.view(x.size(0), *self.input_shape)
         if self.model_name == 'cnn':
@@ -187,6 +243,11 @@ class DownstreamModel(nn.Module):
         return x.view(x.size(0), -1)
 
     def predict_from_features(self, feats):
+        """
+        Compute class logits directly from pre-extracted features.
+        This bypasses the full backbone and applies only the final classifier layer(s), depending on the selected model architecture.
+        """
+
         if self.model_name == 'cnn':
             return self.backbone.classifier(feats)
         if self.model_name == 'resnet18':
@@ -195,6 +256,7 @@ class DownstreamModel(nn.Module):
 
     def get_predictions(self, x_data):
         """Probability distribution using extracted features."""
+
         self.eval()
         with torch.no_grad():
             feats = self.extract_features(x_data.to(self.device))
@@ -220,6 +282,16 @@ class DownstreamModel(nn.Module):
         print(f"Downstream model saved to {save_dir}/{name}.pth")
 
     def load_model(self, name='downstream', save_dir=None):
+        """
+        Load downstream model weights from disk.
+        If no save directory is provided, the method automatically loads from:
+            trained_models_<model_name>_<data_source>
+
+        Args:
+            name (str): Base filename (without .pth extension).
+            save_dir (str, optional): Directory containing the saved model file.
+
+        """
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
             save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
@@ -241,10 +313,25 @@ def init_downstream_model(model_name, input_shape, num_classes, feature_dim, dev
     return model, initial_state, baseline_acc
 
 class PolicyNetwork(nn.Module):
-    '''
-    Policy network for PolicyGradient
+    """
+    Policy (Actor) network for PolicyGradient
     Maps state to action logits
-    '''
+
+    Architecture:
+        - Linear (state_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → num_actions)
+
+    Args:
+        state_dim (int): Dimension of the state vector.
+        num_actions (int): Number of discrete actions.
+        hidden_dim (int): Size of hidden layers.
+
+    Attributes:
+        fc1 (nn.Linear): First hidden layer.
+        fc2 (nn.Linear): Second hidden layer.
+        fc3 (nn.Linear): Output layer producing logits.
+    """
     def __init__(self, state_dim, num_actions, hidden_dim=64):
         super(PolicyNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
@@ -258,10 +345,24 @@ class PolicyNetwork(nn.Module):
 
 
 class ValueNetwork(nn.Module):
-    '''
-    Value network for PolicyGradient
-    Maps state to value estimate
-    '''
+    """
+    Value (critic) network for PolicyGradient
+    Maps state to value estimate V(s)
+
+    Architecture:
+        - Linear (state_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → 1)
+
+    Args:
+        state_dim (int): Dimension of the input state.
+        hidden_dim (int): Size of hidden layers.
+
+    Attributes:
+        fc1 (nn.Linear): First hidden layer.
+        fc2 (nn.Linear): Second hidden layer.
+        fc3 (nn.Linear): Final scalar value output.
+    """
     def __init__(self, state_dim, hidden_dim=64):
         super(ValueNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
