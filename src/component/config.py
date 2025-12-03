@@ -6,22 +6,22 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_source = 'mnist'
 #---------------- Downstream model configuration --------------
 # can accept "cnn" or "mlp" or "resnet18"
-model_name = 'mlp'
+model_name = 'cnn'
 #---------------- Central config for hyperparameters--------------
 # Training parameters
 episodes = 50
-num_labeled = 1000
-num_unlabeled = 4000
-num_validation = 1000
-
+num_labeled = 18000
+num_unlabeled = 40000
+num_validation = 2000
 # Policy Gradient parameters
 gamma = 0.99
 alpha_pi = 1e-3
 alpha_v = 1e-3
 hidden_dim = 64
 policy_type = 'mlp'
-
 # Downstream Model parameters
 downstream_lr = 0.001
-downstream_epocs = 1
-batch_size = 32
+downstream_epochs = 1
+batch_size = 256
+# Flag that determines which experiment to run (retraining downstream model with pseudo-labels or true labels)
+use_true_labels = False

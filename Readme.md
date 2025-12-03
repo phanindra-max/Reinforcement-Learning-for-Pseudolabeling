@@ -8,45 +8,7 @@ We have implemented a reinforcement learning framework for pseudo-labeling that 
 The RL agent decides which unlabeled samples should receive labels. The classifier retrains using these pseudo-labels. If validation error improves, the agent receives a positive reward.
 
 
-## Key Features  
-- Semi-supervised learning with RL  
-- REINFORCE policy gradient optimization  
-- Accuracy-based reward: `old_error − new_error`  
-- Pseudo-label batching 
-- Custom Gym RL environment  
-- CNN-based downstream classifier  
-- TensorBoard for visualization  
-- Modular and extensible code design  
-
----
-
-
 https://github.com/user-attachments/assets/0857a3ed-9e58-468c-b43e-a56fbee27a23
-
-
-
-
-## Project Structure
-```
-capstone
-├── demo/                           # Presentation Recording
-├── presentation/                   # Preliminary and final presentation
-├── reports/                        # Final report, progress reports
-├── research_paper/                 # Final research paper
-├── src/
-│   ├── components/                 # Main project source code
-│   │   ├── main.py                 # RL + classifier training loop
-│   │   ├── env.py                  # Custom Gym environment
-│   │   ├── model.py                # downstream model + policy network
-│   │   ├── utils.py                # Data loading & preprocessing
-│   │   ├── config.py               # Hyperparameters
-│   │   └── requirements.txt        # Python dependencies
-│   ├── tests/
-│   │   └── trained_models_<model_name>_<data_source>.zip  # Saved weights (zip)
-│   └── Readme.md                   # Instructions for running code
-├── .gitignore
-└── Readme.md                       # Main project README (high-level)
-```
 
 ---
 
@@ -60,14 +22,10 @@ Dataset is divided into three sets:
 
 Splitting sizes are configured in `config.py`.
 
----
-
 ### 2. Initial Classifier Training  
 The CNN classifier is trained on the labeled set.  
 Validation accuracy is computed → error rate = `1 - accuracy`.  
 This establishes the baseline used to compute rewards.
-
----
 
 ### 3. RL Episode (One Full Pass Over Unlabeled Data)  
 For each unlabeled image:
@@ -125,10 +83,35 @@ Q -->|No| R[End Episode and Save Models]
 
 ---
 
+## Project Structure
+
+```
+capstone
+├── demo/                           # Presentation Recording
+├── presentation/                   # Preliminary and final presentation
+├── reports/                        # Final report in latex
+├── research_paper/                 # Final research paper in latex
+├── src/
+│   ├── component/                  # Main project source code
+│   │   ├── main.py                 # RL + classifier training loop
+│   │   ├── env.py                  # Custom Gym environment
+│   │   ├── model.py                # downstream model + policy network
+│   │   ├── utils.py                # Data loading & preprocessing
+│   │   ├── config.py               # Hyperparameters
+│   │   └── requirements.txt        # Python dependencies
+│   ├── tests/
+│   │   └── trained_models_<model_name>_<data_source>.zip  # Saved weights (zip)
+│   └── Readme.md                   # Instructions for running code
+├── .gitignore
+└── Readme.md                       # Main project README (high-level)
+```
+
+---
+
 ### 4. Research Background
 
-This approach is inspired by concepts from:
+This approach is inspired by concepts from following research papers:
 
-- [A review of Pseudo-Labeling For Computer Vision] (https://arxiv.org/pdf/2408.07221)
+- [A review of Pseudo-Labeling For Computer Vision](https://arxiv.org/pdf/2408.07221)
 - [RLGSSL (Reinforcement Learning for Graph-Based SSL)](https://arxiv.org/pdf/2405.01760)
 - [Selective Pseudo-Labeling with Reinforcement Learning for Semi-Supervised Domain Adaptation](https://arxiv.org/pdf/2012.03438)
