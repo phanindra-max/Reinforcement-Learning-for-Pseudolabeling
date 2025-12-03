@@ -20,19 +20,19 @@
 
 %%\documentclass[sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
 
-%%Note: the following reference styles support Namedate and Numbered referencing. By default the style follows the most common style. To switch between the options you can add or remove Numbered in the optional parenthesis. 
+%%Note: the following reference styles support Namedate and Numbered referencing. By default the style follows the most common style. To switch between the options you can add or remove “Numbered” in the optional parenthesis. 
 %%The option is available for: sn-basic.bst, sn-chicago.bst%  
  
 %%\documentclass[pdflatex,sn-nature]{sn-jnl}% Style for submissions to Nature Portfolio journals
 %%\documentclass[pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
-\documentclass[pdflatex,sn-mathphys-num,iicol]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
 %%\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Math and Physical Sciences Author Year Reference Style
 %%\documentclass[pdflatex,sn-aps]{sn-jnl}% American Physical Society (APS) Reference Style
 %%\documentclass[pdflatex,sn-vancouver-num]{sn-jnl}% Vancouver Numbered Reference Style
 %%\documentclass[pdflatex,sn-vancouver-ay]{sn-jnl}% Vancouver Author Year Reference Style
 %%\documentclass[pdflatex,sn-apa]{sn-jnl}% APA Reference Style
 %%\documentclass[pdflatex,sn-chicago]{sn-jnl}% Chicago-based Humanities Reference Style
-
+% \usepackage[a4paper, total={6.5in, 9in}]{geometry}
 %%%% Standard Packages
 %%<additional latex packages if required can be included here>
 
@@ -82,33 +82,35 @@
 
 \raggedbottom
 %%\unnumbered% uncomment this for unnumbered level heads
+%% Reduce footnote spacing
+\setlength{\skip\footins}{5pt}  % reduces space between main text and footnote
+\renewcommand{\footnotesize}{\fontsize{8}{9}\selectfont} % smaller font and line spacing
 
 \begin{document}
 
 \title[RL for Pseudo-Labeling]{Reinforcement Learning for Pseudo-Labeling}
 
 %%=============================================================%%
-%% GivenName	-> \fnm{Joergen W.}
-%% Particle	-> \spfx{van der} -> surname prefix
-%% FamilyName	-> \sur{Ploeg}
-%% Suffix	-> \sfx{IV}
+%% GivenName    -> \fnm{Joergen W.}
+%% Particle -> \spfx{van der} -> surname prefix
+%% FamilyName   -> \sur{Ploeg}
+%% Suffix   -> \sfx{IV}
 %% \author*[1,2]{\fnm{Joergen W.} \spfx{van der} \sur{Ploeg} 
 %%  \sfx{IV}}\email{iauthor@gmail.com}
 %%=============================================================%%
 
-\author*[1]{\fnm{Satya Phanindra Kumar} \sur{Kalaga}}\email{sk380@gwmail.gwu.edu}
-
 \author[1]{\fnm{Aishwarya} \sur{Maddula}}
 \author[1]{\fnm{Deepika} \sur{Reddygari}}
+\author*[1]{\fnm{Phanindra} \sur{Kalaga}}\email{phanindra.connect@gmail.com}
 \author[1]{\fnm{Prudhvi} \sur{Chekuri}}
 
-\affil*[1]{\orgdiv{Data Science Program}, \orgname{The George Washington University}, \orgaddress{\street{Street}, \city{Washington}, \state{DC}, \country{USA}}}
+\affil*[1]{\orgdiv{Data Science}, \orgname{The George Washington University}, \orgaddress{\city{Washington}, \state{DC}, \country{USA}}}
 
 %%==================================%%
 %% Sample for unstructured abstract %%
 %%==================================%%
 
-\abstract{Semi-supervised learning addresses the challenge of limited labeled data by leveraging large amounts of unlabeled data. This project develops a reinforcement learning (RL) framework for intelligent pseudo-labeling, where an RL agent learns to selectively assign high-quality pseudo-labels to unlabeled samples. We implement and evaluate both a basic Policy Gradient approach on MNIST and a novel Reinforcement Learning-Guided Semi-Supervised Learning (RLGSSL) approach inspired by recent research. Our framework formulates pseudo-labeling as a sequential decision-making problem, with state representations based on image features, model predictions, and uncertainty measures. Experimental results demonstrate the effectiveness of confidence-based reward functions and adaptive training strategies. We identify key challenges including computational complexity, reward function design, and system stability issues that provide valuable insights for future work in RL-guided semi-supervised learning.}
+\abstract{Semi-supervised learning addresses the challenge of limited labeled data by leveraging large amounts of unlabeled data. This project develops a reinforcement learning (RL) framework for intelligent pseudo-labeling, where an RL agent learns to selectively assign high-quality pseudo-labels to unlabeled samples. We implement and evaluate both a Policy Gradient approach using a custom Gymnasium environment and a Reinforcement Learning-Guided Semi-Supervised Learning (RLGSSL) framework with teacher-student learning. Our framework formulates pseudo-labeling as a sequential decision-making problem, with state representations based on CNN features, model predictions, and prediction entropy. Experimental results demonstrate substantial improvements over supervised-only baselines: achieving 96.55\% accuracy on MNIST (up from 46\% baseline) and 65.60\% on CIFAR-10 (up from 27.40\% baseline) with the Policy Gradient approach. We identify key challenges including episode-wise performance degradation and reward function design that provide valuable insights for future work in RL-guided semi-supervised learning.}
 
 \keywords{Semi-Supervised Learning, Reinforcement Learning, Pseudo-Labeling, RLGSSL}
 
@@ -124,12 +126,12 @@ In modern machine learning applications, obtaining large quantities of labeled t
 
 Traditional pseudo-labeling approaches rely on simple heuristics such as confidence thresholds, often selecting pseudo-labels based solely on prediction confidence. However, these methods can propagate errors when incorrect high-confidence predictions are blindly accepted, leading to confirmation bias \cite{arazo2020pseudolabelingconfirmationbiasdeep} and degraded model performance.
 
-This work addresses these limitations by framing pseudo-labeling as a reinforcement learning problem. By treating the selection and assignment of pseudo-labels as a sequential decision-making task, we enable an intelligent agent to learn optimal labeling strategies that balance exploration (diverse samples) and exploitation (high-confidence samples).
+This work addresses these limitations by framing pseudo-labeling as a reinforcement learning problem. By treating the selection and assignment of pseudo-labels as a sequential decision-making task, we enable an intelligent agent to learn optimal labeling strategies that balance exploration (diverse samples) and exploitation (high-confidence samples).\\
 
 We explore two complementary approaches to RL-based pseudo-labeling:
 \begin{enumerate}
-    \item \textbf{Approach 1}: A custom RL environment with Policy Gradients, implementing a complete framework from scratch.
-    \item \textbf{Approach 2}: The RLGSSL Framework, investigating and implementing the Reinforcement Learning-Guided Semi-Supervised Learning approach proposed by Heidari et al., which integrates RL with teacher-student frameworks and mixup augmentation.
+    \item A custom RL environment with Policy Gradients, implementing a complete framework from scratch.\\
+    \item The RLGSSL Framework, investigating and implementing the Reinforcement Learning-Guided Semi-Supervised Learning approach proposed by Heidari et al., which integrates RL with teacher-student frameworks and mixup augmentation.
 \end{enumerate}
 
 \section{Literature Review}\label{sec:lit_review}
@@ -139,22 +141,20 @@ Semi-supervised learning has been extensively studied as a paradigm for learning
 Traditional pseudo-labeling assigns labels to unlabeled samples based on model predictions exceeding a confidence threshold. Recent improvements include Confidence-Based Selection \cite{sohn2020fixmatchsimplifyingsemisupervisedlearning}, Temporal Ensembling (Mean Teacher), and MixUp Augmentation. RL has also been explored for selective pseudo-labeling in domain adaptation contexts \cite{liu2020selectivepseudolabelingreinforcementlearning}.
 
 Our primary inspiration comes from Heidari et al. \cite{heidari2024rlgssl}, who proposed RLGSSL, a framework that formulates semi-supervised learning as a reinforcement learning problem. Their key contributions include using the classification network itself as the RL policy, implementing reward signals derived from model performance on synthetically mixed samples (Mixup), and a novel loss formulation based on KL divergence weighting:
+\\
 \begin{equation}
 \mathcal{L}_{rl} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]
 \end{equation}
-
+\\
 Our work differs by exploring both custom RL environments with explicit state-action formulations and integrated RLGSSL approaches. We also introduce adaptive enhancements including confidence bonuses, diversity regularization, and curriculum learning mechanisms.
-
-% TODO: Add citations for MixMatch, FixMatch, Mean Teacher, Yarowsky 1995, etc.
-% TODO: Check citations for Active Learning and Curriculum Learning in the context of RL for Data Selection.
 
 \section{Methodology}\label{sec:method}
 
-We developed a comprehensive approach to RL-based pseudo-labeling using two implementations: a custom Policy Gradient framework and an RLGSSL-based approach with adaptive enhancements.
+We developed a comprehensive approach to RL-based pseudo-labeling, hypothesizing that a learnable policy can outperform static thresholds by adapting to the changing reliability of the downstream classifier during training. To test this, we designed two distinct implementations. The first is a modular architecture using a custom OpenAI Gymnasium environment, and the second is an integrated RLGSSL-based approach where the classifier and policy are unified.
 
 \subsection{Gymnasium}\label{subsec:gym}
 
-We implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}, to encapsulate the pseudo-labeling task. The overall system flow is illustrated in Figure \ref{fig:system_flow}.
+To formalize the interaction between the labeling agent and the unlabeled dataset, we implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}. This environment serves as a wrapper, abstracting the complexities of data loading and feature extraction into a standard RL interface. The overall system flow is illustrated in Figure \ref{fig:system_flow}.
 
 \begin{figure}[h]
 \centering
@@ -163,9 +163,10 @@ We implemented a custom OpenAI Gymnasium environment, \texttt{PseudoLabelEnv}, t
 \label{fig:system_flow}
 \end{figure}
 
+The environment manages the lifecycle of the training process through standard methods:
 \begin{itemize}
-    \item \textbf{env.reset()}: Resets the environment at the start of an episode. The downstream model may be re-initialized or preserved depending on the training mode. The environment prepares the first batch of unlabeled samples.
-    \item \textbf{env.step(action)}: Takes an action (assign label or skip) for the current sample $x_i$. Returns the next state $s_{i+1}$, the reward $r_i$, a done flag, and info.
+    \item \textbf{Initialization (\texttt{reset})}: At the start of an episode, the environment resets internal counters and prepares the first batch of unlabeled samples. Depending on the specific experimental configuration, the downstream model may be re-initialized to prevent overfitting or preserved to simulate continuous learning.
+    \item \textbf{Transition (\texttt{step})}: This method executes the core logic of the MDP. Upon receiving an action for the current sample $x_i$, the environment evaluates the correctness of the action (internally using ground truth during training phases), computes the reward $r_i$, and constructs the subsequent state $s_{i+1}$. It returns this tuple along with a termination flag.
 \end{itemize}
 
 The training loop for the RL agent follows the procedure outlined in Algorithm \ref{alg:rl_training}.
@@ -196,137 +197,180 @@ The training loop for the RL agent follows the procedure outlined in Algorithm \
 
 \subsection{MDP Formulation}\label{subsec:mdp}
 
-We formulate the problem as a Markov Decision Process (MDP):
+We formulate the problem as a Markov Decision Process (MDP), which mathematically models the sequential decision-making required to label a stream of data points. The components of the MDP are defined as follows:
 
 \begin{itemize}
-    \item \textbf{State Space ($\mathcal{S}$)}: For each unlabeled sample $x_i$, the state $s_i$ is constructed as $s_i = [\phi(x_i), P_\theta(x_i), H(P_\theta(x_i))]$, combining flattened image features $\phi(x_i)$, softmax class probabilities $P_\theta(x_i)$, and prediction entropy $H(P_\theta(x_i))$.
-    
-    \item \textbf{Action Space ($\mathcal{A}$)}: Discrete actions for a $K$-class problem: $\mathcal{A} = \{0, 1, \ldots, K-1, \text{skip}\}$. Actions $0$ to $K-1$ assign a pseudo-label; the skip action indicates the sample should not be labeled.
-    
-    \item \textbf{Reward Function ($R$)}: A confidence-weighted reward function encourages correct, high-confidence predictions:
+
+    \item \textbf{State Space ($\mathcal{S}$)}: The state representation is crucial for the agent to gauge the reliability of the downstream model. For each unlabeled sample $x_i$, the state $s_i$ is constructed as a concatenation of three distinct feature sets:
     \begin{equation}
-    R(s_i, a_i) = \begin{cases}
-    -0.1 & \text{if } a_i = \text{skip} \\
-    P_\theta(x_i)_{a_i} & \text{if } a_i = y_i^{\text{true}} \\
-    -P_\theta(x_i)_{a_i} & \text{if } a_i \neq y_i^{\text{true}}
-    \end{cases}
+     s_i = [\phi(x_i), P_\theta(x_i), H(P_\theta(x_i))]
     \end{equation}
-    Note: $y_i^{\text{true}}$ is used only for reward computation during training in the custom environment setting. In the RLGSSL approach, rewards are derived from performance on Mixup samples without ground truth access for unlabeled data.
+    \underline{Here, $\phi(x_i)$ represents the flattened high-level image features extracted by the CNN}, providing semantic context. $P_\theta(x_i)$ denotes the softmax class probabilities, representing the model's current belief distribution. Finally, $H(P_\theta(x_i))$ is the prediction entropy, serving as a scalar measure of epistemic uncertainty.
     
-    In RLGSSL, the reward signal evaluates performance on mixup data:
+    \item \textbf{Action Space ($\mathcal{A}$)}: The action space defines the choices available to the agent. For a classification problem with $K$ classes, we define a discrete action space:
     \begin{equation}
-    R(s, a; \text{sg}[\theta]) = -\text{MSE}(P_\theta(x_i^m), y_i^m)
+    \mathcal{A} = \{0, 1, \ldots, K-1, \text{skip}\}.
     \end{equation}
+    Actions $0$ through $K-1$ correspond to assigning a specific pseudo-label to the sample $x_i$. Crucially, we introduce a $\text{skip}$ action. This allows the agent to act conservatively, opting not to label a sample if the confidence is low or the state is ambiguous, thereby preventing the contamination of the training set with noisy labels.
     
-    \item \textbf{Terminal State}: The episode terminates when all $N$ unlabeled samples in the current batch or dataset have been processed.
+    \item \textbf{Reward Function ($R$)}: The reward function drives the policy optimization. We utilize two distinct reward structures depending on the framework:
+    \begin{enumerate}
+        \item \textit{Custom Environment (Training)}: When ground truth $y_i^{\text{true}}$ is accessible for the reward signal (but hidden from the input), we use a confidence-weighted reward:
+        \begin{equation}
+        R(s_i, a_i) = \begin{cases}
+        -0.1 & \text{if } a_i = \text{skip} \\
+        P_\theta(x_i)_{a_i} & \text{if } a_i = y_i^{\text{true}} \\
+        -P_\theta(x_i)_{a_i} & \text{if } a_i \neq y_i^{\text{true}}
+        \end{cases}
+        \end{equation}
+        This penalizes incorrect high-confidence guesses heavily while applying a small penalty for skipping to encourage eventual labeling.
+        
+        \item \textit{RLGSSL}: In the absence of ground truth, the reward is derived from consistency. We measure the Mean Squared Error (MSE) between predictions on original and Mixup-augmented samples:
+        \begin{equation}
+        R(s, a; \text{sg}[\theta]) = -\text{MSE}(P_\theta(x_i^m), y_i^m)
+        \end{equation}
+        This reward encourages the model to be invariant to perturbations, a core tenet of semi-supervised learning.
+    \end{enumerate}
+    
+    \item \textbf{Terminal State}: An episode is defined as one complete pass through the available batch of unlabeled data. The terminal state is reached when all $N$ samples in the current buffer have been processed (either labeled or skipped).
 \end{itemize}
 
 \subsection{Models}\label{subsec:models}
 
 \subsubsection{Downstream Model}
-The downstream classification model serves as the primary classifier and, in the RLGSSL framework, also acts as the policy. For MNIST experiments, we utilized a Convolutional Neural Network (CNN) with two Conv2D layers followed by Fully Connected layers.
+The downstream model acts as the primary classifier for the task and, in our architecture. For our experiments on the MNIST dataset, we constructed a Convolutional Neural Network (CNN). The architecture consists of two 2D convolutional layers with ReLU activation to extract spatial hierarchies, followed by max-pooling layers for dimensionality reduction. The output is flattened and passed through fully connected dense layers to produce the logits:
 \begin{equation}
 \text{logits} = \text{CNN}(x; \theta)
 \end{equation}
-This model generates softmax predictions and entropy values used for state construction.
-
-% TODO: Add Table for Downstream Model Architecture (Layer, Output Shape, Parameters).
+These logits are converted to probabilities via Softmax to form the prediction component of the RL state.
 
 \subsubsection{RL Agents}
-\textbf{Policy Gradient Agent}: An Actor-Critic architecture where the Policy Network maps states to action logits, and the Value Network estimates state values. Updates are performed using standard Policy Gradient losses.
+We investigated two distinct agent architectures to solve the MDP:
 
-\textbf{RLGSSL Agent}: The classification network itself serves as the RL policy. The RL loss combines KL divergence weighting with reward scaling:
+\textbf{Policy Gradient Agent}: This agent utilizes an Actor-Critic architecture explicitly separated from the classifier. The \textit{Actor} network takes the state $s_i$ and outputs a probability distribution over the action space $\mathcal{A}$. The \textit{Critic} network estimates the value function $V(s_i)$ to reduce the variance of the gradient updates. This separation allows for precise control over the labeling policy but requires training two distinct sets of parameters.
+
+\textbf{RLGSSL Agent}: In this integrated approach, the classification network itself functions as the RL policy $\pi_\theta$. The network parameters $\theta$ are optimized to simultaneously minimize the supervised classification loss on labeled data and maximize the expected reward on unlabeled data. The RL objective is formulated as:
 \begin{equation}
 \mathcal{L}_{\text{rl}} = -\mathbb{E}_{y_i^u \sim \pi_\theta} [\text{KL}(e, y_i^u) \times R(s,a;\text{sg}[\theta])]
 \end{equation}
-Adaptive enhancements such as confidence bonuses and diversity regularization were integrated to improve stability.
+Here, the Kullback-Leibler (KL) divergence term acts as a weighting mechanism, and the reward signal directs the gradient updates. To improve stability, we integrated adaptive enhancements, including confidence bonuses and diversity regularization, to prevent the policy from collapsing into a trivial solution (e.g., predicting a single class).
 
 \subsection{Metrics}\label{subsec:metrics}
-We evaluated performance using:
+To rigorously evaluate the performance of our RL frameworks, we tracked the following metrics:
+
 \begin{itemize}
-    \item \textbf{Accuracy}: Classification accuracy on the validation/test set.
-    \item \textbf{RL Loss}: The specific loss component optimizing the pseudo-labeling policy.
-    \item \textbf{Reward}: Average reward per episode or batch, indicating the quality of pseudo-labeling decisions.
+    \item \textbf{Accuracy}: The primary measure of utility, calculated as the ratio of correct predictions to total predictions on the held-out validation set:
+    \begin{equation}
+        \text{Accuracy} = \frac{1}{N_{val}} \sum_{i=1}^{N_{val}} \mathbb{I}(\hat{y}_i = y_i)
+    \end{equation}
+    \item \textbf{RL Loss}: This metric tracks the convergence of the policy optimization. For the Policy Gradient agent, it represents the combined actor and critic losses. For RLGSSL, it is the specific component $\mathcal{L}_{\text{rl}}$ responsible for pseudo-label optimization.
+    \item \textbf{Average Reward}: This serves as a proxy for the quality of the pseudo-labels generated during training. It is calculated per episode or batch as:
+    \begin{equation}
+        \bar{R} = \frac{1}{T} \sum_{t=1}^{T} r_t
+    \end{equation}
+    A rising average reward indicates that the agent is learning to select correct labels with higher confidence.
 \end{itemize}
 
 \section{Results}\label{sec:results}
 
 \subsection{Policy Gradient Results}
-The Policy Gradient agent demonstrated adaptive behavior, learning to balance pseudo-labeling and skipping. Initial baseline accuracy was $\sim$85\% on MNIST with 1000 labeled samples.
-
-\begin{figure*}[h]
-    \centering
-    \begin{minipage}{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{Fig/rlgssl_learning_curve.pdf} % Placeholder: update filename
-        \caption{Learning curve for RLGSSL approach on CIFAR-10.}
-        \label{fig:rlgssl_curve}
-    \end{minipage}\hfill
-    \begin{minipage}{0.48\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{Fig/fixmatch_comparison.pdf} % Placeholder: update filename
-        \caption{Comparison with FixMatch baseline implementation.}
-        \label{fig:fixmatch_curve}
-    \end{minipage}
-    \caption{Training dynamics and comparative analysis of learning curves.}
-    \label{fig:combined_learning_curves}
-\end{figure*}
-
-\subsection{RLGSSL Results}
-Table \ref{tab:rlgssl_training} shows the training progression on CIFAR-10 with 1000 labeled samples.
+The Policy Gradient agent demonstrated adaptive behavior, learning to balance pseudo-labeling and selective skipping based on model confidence. We evaluated the approach across multiple datasets and architectures. Table \ref{tab:pg_results} summarizes the key results.
 
 \begin{table}[h]
-\caption{RLGSSL training progression on CIFAR-10 (1000 labels).}\label{tab:rlgssl_training}
-\begin{tabular}{@{}lllll@{}}
+\caption{Policy Gradient results across datasets and architectures.}\label{tab:pg_results}
+\begin{tabular}{@{}llccc@{}}
 \toprule
-Epoch & Acc (\%) & Loss & RL Loss & Notes \\
+Dataset & Model & Baseline Acc. & Best Acc. & Improvement \\
 \midrule
-5 (warmup) & 29.12 & -- & -- & Student: 29.12\%, Teacher: 10.00\% \\
-60 & 36.51 & 0.2101 & 0.0102 & Stable initial training \\
-120 & 43.06 & 0.1808 & -0.0018 & Steady improvement \\
-175 & \textbf{45.55} & 0.1285 & -0.0383 & Best accuracy \\
-240 & 36.20 & -0.0485 & -0.2837 & System crashed (Instability) \\
+MNIST & CNN & 46.00\% & \textbf{96.55\%} & +50.55\% \\
+CIFAR-10 & CNN & 27.40\% & \textbf{65.60\%} & +38.20\% \\
+CIFAR-10 & ResNet-18 & 70.70\% & \textbf{74.25\%} & +3.55\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The best student accuracy achieved was 45.55\% at Epoch 175. Training was impacted by system instability and computational constraints (crashes around epoch 240).
+On MNIST with 18,000 labeled samples and 40,000 unlabeled samples, the Policy Gradient agent achieved 96.55\% accuracy in the first episode, representing a 50.55 percentage point improvement over the supervised-only baseline (46\% accuracy). However, we observed performance degradation over subsequent episodes, with accuracy declining to approximately 40\% by episode 50. This pattern suggests challenges in maintaining stable learning across episodes, potentially due to confirmation bias from accumulated pseudo-labels.
 
-% TODO: Add comparison table with literature benchmarks (Heidari et al. results vs Our Target).
+For CIFAR-10 with a CNN backbone, the best accuracy of 65.60\% was achieved in episode 2, improving from a 27.40\% baseline. With ResNet-18, the stronger pretrained features resulted in a higher baseline (70.70\%) with more modest but stable improvements to 74.25\%.
+
+\subsection{RLGSSL Results}
+Table \ref{tab:rlgssl_training} shows the training progression on CIFAR-10 with 1000 labeled samples using the RLGSSL framework.
+
+\begin{table}[h]
+\caption{RLGSSL training progression on CIFAR-10 (1000 labels).}\label{tab:rlgssl_training}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Epoch & Acc (\%) & Loss & RL Loss \\
+\midrule
+5 (warmup) & 29.12 & -- & -- \\
+60 & 36.51 & 0.2101 & 0.0102 \\
+120 & 43.06 & 0.1808 & -0.0018 \\
+175 & \textbf{45.55} & 0.1285 & -0.0383 \\
+300 & 42.80 & 0.1156 & -0.0286 \\
+450 & 41.20 & 0.1089 & -0.0282 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The RLGSSL framework achieved a best accuracy of 45.55\% at epoch 175, improving from a 29.12\% warmup accuracy. The RL reward signal showed consistent improvement throughout training, trending from approximately $-0.0305$ to $-0.028$ over 450 epochs, indicating that the agent learned to make increasingly better pseudo-labeling decisions. After epoch 175, performance plateaued and showed slight degradation, suggesting diminishing returns from additional RL-guided pseudo-labeling.
+
+\subsection{Comparison with Baseline}
+Table \ref{tab:comparison} compares our approaches against the supervised-only baseline (no pseudo-labeling).
+
+\begin{table}[h]
+\caption{Comparison of methods against supervised-only baseline.}\label{tab:comparison}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Dataset & Method & Accuracy & vs. Baseline \\
+\midrule
+\multirow{2}{*}{MNIST} & Supervised Only & 46.00\% & -- \\
+ & Policy Gradient (Ours) & \textbf{96.55\%} & +50.55\% \\
+\midrule
+\multirow{3}{*}{CIFAR-10} & Supervised Only & 27.40\% & -- \\
+ & Policy Gradient (Ours) & \textbf{65.60\%} & +38.20\% \\
+ & RLGSSL (Ours) & 45.55\% & +18.15\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both RL-based approaches substantially outperform the supervised-only baseline, demonstrating the effectiveness of intelligent pseudo-labeling for leveraging unlabeled data.
 
 \section{Discussion}\label{sec:discussion}
 
-Our experiments highlighted significant challenges in applying RL to pseudo-labeling.
+The application of Reinforcement Learning to the task of pseudo-labeling presents a complex set of trade-offs between adaptability and stability. Our experiments revealed several important insights that differentiate this approach from static heuristic methods.
 
-\textbf{Reward Function Design}: Designing effective rewards was critical. We found that sparse rewards (end-of-episode accuracy) were insufficient, while dense, confidence-based rewards introduced stability issues. The adaptive reward enhancements in RLGSSL, specifically diversity bonuses, likely contributed to gradient explosions.
+\textbf{Strong Initial Performance with Degradation}: A consistent pattern across experiments was strong initial performance followed by gradual degradation. On MNIST, the Policy Gradient agent achieved 96.55\% accuracy in episode 1 but declined to approximately 40\% by episode 50. This behavior suggests the RL agent initially makes high-quality pseudo-labeling decisions but struggles to maintain this performance, potentially due to confirmation bias where early pseudo-labels influence subsequent model updates.
 
-\textbf{Implementation Challenges}: We identified and resolved several critical bugs:
-\begin{enumerate}
-    \item \textbf{Inverted RL Loss}: Initially computed as positive correlation with MSE, causing the model to minimize prediction quality.
-    \item \textbf{Stop Gradient}: A misunderstanding of $\text{sg}[\theta]$ initially blocked gradients to the student model, preventing learning.
-    \item \textbf{Imbalanced Weights}: Low weights for supervised loss allowed the RL objective to dominate, leading to collapse.
-\end{enumerate}
-Correcting these stabilized training but performance gaps remained compared to state-of-the-art.
+\textbf{The Reward Shaping Dilemma}: Designing an effective reward function proved to be the most critical factor. We observed that sparse rewards (e.g., providing feedback only at the end of an episode based on validation accuracy) were insufficient for the agent to learn granular labeling policies. Conversely, dense, confidence-based rewards introduced significant variance. The RLGSSL approach using mixup-based rewards showed more stable learning curves, with rewards consistently improving from $-0.0305$ to $-0.028$ over 450 epochs.
+
+\textbf{Architecture Sensitivity}: Results varied substantially across architectures. ResNet-18 on CIFAR-10 showed more stable but modest improvements (70.70\% $\rightarrow$ 74.25\%), while the CNN showed larger gains (27.40\% $\rightarrow$ 65.60\%) but from a weaker baseline. This suggests RL-based pseudo-labeling may be most beneficial when the base model has significant room for improvement.
+
+\textbf{State Representation Considerations}: Our state representation concatenates CNN features, softmax probabilities, and entropy without explicit normalization across these heterogeneous components. The varying scales (high-dimensional CNN features vs. scalar entropy) may limit the agent's ability to optimally weight these signals, representing an area for future improvement.
+
+\textbf{Computational Trade-offs}: The RL framework introduces substantial computational overhead compared to simple threshold-based pseudo-labeling. Each pseudo-labeling decision requires forward passes through both the policy network and downstream model, making the approach more suitable for scenarios where labeling quality is paramount over training speed.
 
 \section{Conclusion}\label{sec:conclusion}
 
-This project demonstrated the feasibility of RL-based pseudo-labeling, developing both a custom Gymnasium environment and an RLGSSL implementation. While we achieved stable initial training and adaptive behavior, the approach is computationally demanding and sensitive to hyperparameter settings.
+This project successfully demonstrated the feasibility and potential of formulating pseudo-labeling as a reinforcement learning problem. By developing both a modular custom Gymnasium environment with Policy Gradient optimization and an integrated RLGSSL implementation with teacher-student learning, we showed that an agent can learn to adaptively select labels based on uncertainty and consistency metrics.
+
+Our Policy Gradient approach achieved substantial improvements over supervised-only baselines, with gains of up to 50.55 percentage points on MNIST (46\% $\rightarrow$ 96.55\%) and 38.20 percentage points on CIFAR-10 (27.40\% $\rightarrow$ 65.60\%). The RLGSSL framework showed stable training dynamics with consistent reward improvement over 450 epochs, achieving 45.55\% accuracy on CIFAR-10 with only 1,000 labeled samples.
 
 \subsection{Limitations}
 \begin{itemize}
-    \item \textbf{Computational Constraints}: Training on CPU was insufficient, with runs taking 15+ hours and failing to complete full epochs.
-    \item \textbf{Stability}: Adaptive reward enhancements caused numerical instability and crashes.
-    \item \textbf{Performance}: Results were below state-of-the-art benchmarks, partly due to incomplete training and the complexity of tuning RL components.
+    \item \textbf{Episode-wise Degradation}: While initial pseudo-labeling decisions yield high accuracy, performance degrades over subsequent episodes. This suggests challenges in maintaining consistent labeling quality, potentially due to confirmation bias from accumulated pseudo-labels.
+    \item \textbf{Computational Overhead}: The RL framework requires additional forward passes for policy decisions, significantly increasing training time compared to threshold-based methods. The iterative nature of RL makes training computationally expensive.
+    \item \textbf{State Representation}: Heterogeneous state components (CNN features, probabilities, entropy) lack normalization, potentially limiting policy optimization due to scale mismatches.
+    \item \textbf{Hyperparameter Sensitivity}: The balance between RL loss, supervised loss, and consistency loss requires careful tuning for stable training. The system is highly sensitive to these weight configurations.
 \end{itemize}
 
 \subsection{Future Scope}
-Future work should focus on:
+To advance this line of research, future work should focus on:
 \begin{itemize}
-    \item \textbf{Gymnasium Registration}: Registering the custom pseudo-labeling environment as a standard Gymnasium package to facilitate community research.
-    \item \textbf{Debugging Tool}: Developing a specialized debugging tool for custom RL environments to visualize state transitions and reward signals in real-time.
-    \item \textbf{Optimization}: Implementing PPO-style clipping and gradient normalization to address stability.
+    \item \textbf{Gymnasium Registration}: Registering the custom pseudo-labeling environment as a standard Gymnasium package. This would standardize the benchmark and facilitate community research into RL-based data selection.
+    \item \textbf{State Normalization}: Implementing proper normalization of heterogeneous state features to improve policy learning and address scale mismatch issues.
+    \item \textbf{Advanced RL Algorithms}: Exploring PPO-style trust region clipping and gradient normalization to address episode-wise degradation and improve long-term stability.
+    \item \textbf{Curriculum Strategies}: Incorporating curriculum learning to progressively introduce harder samples, potentially mitigating confirmation bias.
 \end{itemize}
-% TODO: Verify if any other specific future scope items need to be added.
 
 \bibliography{sn-bibliography}
 \end{document}
