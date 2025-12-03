@@ -36,6 +36,9 @@ def main():
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
+    print(f"{'=' * 70}")
+    print("TRAINING LOOP")
+    print(f"{'=' * 70}")
     print("Starting training with PyTorch agent...")
     for episode in tqdm(range(episodes), desc="Training Progress"):
         state, info = env.reset()
@@ -96,6 +99,9 @@ def main():
     writer.close()
     print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
+    env.close()
+    writer.close()
+    print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
 if __name__ == "__main__":
     main()

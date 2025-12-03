@@ -1,0 +1,94 @@
+======================================================================
+DEVICE CONFIGURATION
+======================================================================
+Using device: cuda
+
+======================================================================
+DATASET LOADING AND PREPERATION
+======================================================================
+Loading CIFAR10 dataset...
+
+Dataset Summary:
+---------------------------------------------
+Dataset                         Size
+---------------------------------------------
+Train set                     50,000
+Test set                      10,000
+Labeled data                  28,000
+Unlabeled data                10,000
+Validation data                2,000
+Discarded/Unused data         10,000
+---------------------------------------------
+
+Metadata Information:
+---------------------------------------------
+Property                  Value
+---------------------------------------------
+Number of classes         10
+Input shape               (3, 32, 32)
+Feature dimension         3072
+Flattened shape           torch.Size([3072])
+---------------------------------------------
+
+======================================================================
+DOWNSTREAM MODEL INITIALIZATION
+======================================================================
+Initializing downstream model: resnet18
+
+======================================================================
+TRAINING LOOP
+======================================================================
+Starting training with PyTorch agent...
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 29.1000%.
+Episode 1: Final Reward = -7.8280, New Accuracy = 70.9000, Error Rate = 29.1000, policy Loss = 0.2338, Value Loss = 0.0168
+
+New best error rate: 29.1000% - Saving models...
+Downstream model saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_downstream.pth
+Policy gradient models saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_policy.pth and /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_value.pth
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 27.1500%.
+Episode 2: Final Reward = -6.6685, New Accuracy = 72.8500, Error Rate = 27.1500, policy Loss = -1.1637, Value Loss = 0.2463
+
+New best error rate: 27.1500% - Saving models...
+Downstream model saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_downstream.pth
+Policy gradient models saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_policy.pth and /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_value.pth
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 28.0000%.
+Episode 3: Final Reward = -6.4670, New Accuracy = 72.0000, Error Rate = 28.0000, policy Loss = -0.3266, Value Loss = 0.0231
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 30.5000%.
+Episode 4: Final Reward = -6.6620, New Accuracy = 69.5000, Error Rate = 30.5000, policy Loss = 0.2303, Value Loss = 0.0125
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 25.7500%.
+Episode 5: Final Reward = -6.0145, New Accuracy = 74.2500, Error Rate = 25.7500, policy Loss = 0.4438, Value Loss = 0.0385
+
+New best error rate: 25.7500% - Saving models...
+Downstream model saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_downstream.pth
+Policy gradient models saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_policy.pth and /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_resnet18_cifar10/best_policy_gradient_value.pth
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 27.1500%.
+Episode 6: Final Reward = -6.0585, New Accuracy = 72.8500, Error Rate = 27.1500, policy Loss = 0.4302, Value Loss = 0.0363
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 27.1500%.
+Episode 7: Final Reward = -6.2285, New Accuracy = 72.8500, Error Rate = 27.1500, policy Loss = 0.3121, Value Loss = 0.0204
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 28.1500%.
+Episode 8: Final Reward = -5.9285, New Accuracy = 71.8500, Error Rate = 28.1500, policy Loss = 0.2239, Value Loss = 0.0111
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 29.0000%.
+Episode 9: Final Reward = -5.9070, New Accuracy = 71.0000, Error Rate = 29.0000, policy Loss = 0.1290, Value Loss = 0.0042
+
+Initial (Episode-Start) Error Rate on Validation Data: 29.30%
+Episode Terminated. Final Error Rate: 29.6000%.
+Episode 10: Final Reward = -5.7030, New Accuracy = 70.4000, Error Rate = 29.6000, policy Loss = 0.0465, Value Loss = 0.0011
+
+======================================================================
+FINAL RESULTS
+======================================================================
+Training finished. Best error rate achieved: 25.7500%

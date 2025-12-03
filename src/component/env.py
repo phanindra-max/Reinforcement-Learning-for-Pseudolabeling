@@ -74,7 +74,7 @@ class PseudoLabelEnv(gym.Env):
         Args:
             seed (int, optional): Random seed for reproducibility
             options (dict, optional): Additional options (not used)
-        
+
         Returns:
             tuple: Initial state observation and empty info dictionary
         """
@@ -83,10 +83,12 @@ class PseudoLabelEnv(gym.Env):
         self.newly_pseudo_labeled_data = []
         self.all_pseudo_labeled_data = []
         self.episode_reward = 0.0
+        self.current_error_rate = self.baseline_error_rate
 
+        # shuffle unlabeled data
         perm = torch.randperm(self.unlabeled_x.size(0))
         self.unlabeled_x = self.unlabeled_x[perm]
-        self.unlabeled_y_true = self.unlabeled_y_true[perm]
+        self.unlabeled_y = self.unlabeled_y[perm]
 
         # Restore the downstream model to initial weights
         self.downstream_model.load_state_dict(self.initial_model_state)
@@ -100,6 +102,7 @@ class PseudoLabelEnv(gym.Env):
         """
         Execute one step in the environment based on the agent's action.
         """
+
         img_idx = self.current_idx
         reward = 0.0
       
@@ -187,27 +190,32 @@ class PseudoLabelEnv(gym.Env):
     
 
     # -----------------------------
-    # Get Next State
+    # Build / Get Next State
     # -----------------------------
     def get_next_state(self):
         """
-        Construct the state observation for the current unlabeled sample.
-        
+        Construct the environment state for the agent.
+        The state includes:
+        - CNN feature embedding of current image
+        - class probability vector
+        - entropy of probability distribution
+
         Returns:
-            np.ndarray: State vector containing concatenation of:
-                - Image features (784-dim)
-                - Model's predicted probability distribution (num_classes-dim)
-                - Prediction entropy (1-dim)
-                Returns zero vector if all samples have been processed.
+            np.ndarray: State vector used as RL observation.
         """
+
         if self.current_idx >= len(self.unlabeled_x):
             return np.zeros(self.observation_space.shape)
-        
-        img_data = self.unlabeled_x[self.current_idx]
-        preds = self.downstream_model.get_predictions(img_data.unsqueeze(0))
-        entropy = -torch.sum(preds * torch.log(preds + 1e-9))
-        
-        state = torch.cat([img_data, preds, entropy.unsqueeze(0)])
+
+        with torch.no_grad():
+            img_data = self.unlabeled_x[self.current_idx]
+            # add batch dimension -> extract features -> remove batch dimension: extracted 1D feature vector
+            feats = self.downstream_model.extract_features(img_data.unsqueeze(0)).squeeze(0)
+            # add batch dimension -> get predictions: class probabilities
+            preds = self.downstream_model.get_predictions(img_data.unsqueeze(0))
+            entropy = -torch.sum(preds * torch.log(preds + 1e-9))
+            state = torch.cat([feats, preds, entropy.unsqueeze(0)]) # build state vector
+
         return state.cpu().numpy()
 
     def render(self):

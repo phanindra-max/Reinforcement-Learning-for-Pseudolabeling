@@ -1,0 +1,20 @@
+# Core deep learning framework
+torch
+torchvision
+torchaudio
+
+# Numerical computation and data handling
+numpy
+scipy
+scikit-learn
+
+# Visualization and plotting
+matplotlib
+seaborn
+
+# Experiment tracking and utilities
+tensorboard
+tqdm
+
+# Reinforcement learning utilities
+gymnasium

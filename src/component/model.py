@@ -161,10 +161,25 @@ class DownstreamModel(nn.Module):
         print(f"Downstream model saved to {save_dir}/{name}.pth")
 
 class PolicyNetwork(nn.Module):
-    '''
-    Policy network for PolicyGradient
+    """
+    Policy (Actor) network for PolicyGradient
     Maps state to action logits
-    '''
+
+    Architecture:
+        - Linear (state_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → num_actions)
+
+    Args:
+        state_dim (int): Dimension of the state vector.
+        num_actions (int): Number of discrete actions.
+        hidden_dim (int): Size of hidden layers.
+
+    Attributes:
+        fc1 (nn.Linear): First hidden layer.
+        fc2 (nn.Linear): Second hidden layer.
+        fc3 (nn.Linear): Output layer producing logits.
+    """
     def __init__(self, state_dim, num_actions, hidden_dim=64):
         super(PolicyNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
@@ -178,10 +193,24 @@ class PolicyNetwork(nn.Module):
 
 
 class ValueNetwork(nn.Module):
-    '''
-    Value network for PolicyGradient
-    Maps state to value estimate
-    '''
+    """
+    Value (critic) network for PolicyGradient
+    Maps state to value estimate V(s)
+
+    Architecture:
+        - Linear (state_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → hidden_dim) + tanh
+        - Linear (hidden_dim → 1)
+
+    Args:
+        state_dim (int): Dimension of the input state.
+        hidden_dim (int): Size of hidden layers.
+
+    Attributes:
+        fc1 (nn.Linear): First hidden layer.
+        fc2 (nn.Linear): Second hidden layer.
+        fc3 (nn.Linear): Final scalar value output.
+    """
     def __init__(self, state_dim, hidden_dim=64):
         super(ValueNetwork, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
@@ -316,11 +345,11 @@ class PolicyGradient:
         
         Args:
             name: Base name for saved models
-            save_dir: Directory to save models (default: src/trained_models)
+            save_dir: Directory to save models (default: src/trained_models_<model>_<dataset>)
         '''
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            save_dir = os.path.join(base_path, 'trained_models')
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
         
         os.makedirs(save_dir, exist_ok=True)
         
@@ -334,13 +363,15 @@ class PolicyGradient:
         
         Args:
             name: Base name for saved models
-            save_dir: Directory to load models from (default: src/trained_models)
+            save_dir: Directory to load models from (default: src/trained_models_<model>_<dataset>)
         '''
         if save_dir is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
-            save_dir = os.path.join(base_path, 'trained_models')
+            save_dir = os.path.join(base_path, f"trained_models_{model_name}_{data_source}")
         
-        self.pi.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_policy.pth')))
-        self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth')))
+        self.pi.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_policy.pth'), map_location=self.device))
+        self.pi.eval()
+        self.v.load_state_dict(torch.load(os.path.join(save_dir, f'{name}_value.pth'), map_location=self.device))
+        self.v.eval()
         print(f"Models loaded from {save_dir}")
 

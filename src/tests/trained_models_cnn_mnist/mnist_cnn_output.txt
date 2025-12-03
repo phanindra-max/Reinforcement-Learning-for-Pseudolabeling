@@ -1,0 +1,248 @@
+======================================================================
+DEVICE CONFIGURATION
+======================================================================
+Using device: cuda
+
+======================================================================
+DATASET LOADING AND PREPERATION
+======================================================================
+Loading MNIST dataset...
+
+Dataset Summary:
+---------------------------------------------
+Dataset                         Size
+---------------------------------------------
+Train set                     60,000
+Test set                      10,000
+Labeled data                  18,000
+Unlabeled data                40,000
+Validation data                2,000
+Discarded/Unused data              0
+---------------------------------------------
+
+Metadata Information:
+---------------------------------------------
+Property                  Value
+---------------------------------------------
+Number of classes         10
+Input shape               (1, 28, 28)
+Feature dimension         784
+Flattened shape           torch.Size([784])
+---------------------------------------------
+
+======================================================================
+DOWNSTREAM MODEL INITIALIZATION
+======================================================================
+Initializing downstream model: cnn
+
+======================================================================
+TRAINING LOOP
+======================================================================
+Starting training with PyTorch agent...
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 3.4500%.
+Episode 1: Final Reward = -37.5245, New Accuracy = 96.5500, Error Rate = 3.4500, policy Loss = 0.0081, Value Loss = 0.0072
+
+New best error rate: 3.4500% - Saving models...
+Downstream model saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_cnn_mnist/best_downstream.pth
+Policy gradient models saved to /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_cnn_mnist/best_policy_gradient_policy.pth and /home/g49199003/Desktop/capstone/fall-2025-group11/src/component/trained_models_cnn_mnist/best_policy_gradient_value.pth
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 9.2000%.
+Episode 2: Final Reward = -28.6920, New Accuracy = 90.8000, Error Rate = 9.2000, policy Loss = -0.0522, Value Loss = 0.0043
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 23.6500%.
+Episode 3: Final Reward = -22.5565, New Accuracy = 76.3500, Error Rate = 23.6500, policy Loss = 0.3582, Value Loss = 0.0285
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 33.5500%.
+Episode 4: Final Reward = -18.6855, New Accuracy = 66.4500, Error Rate = 33.5500, policy Loss = -0.0215, Value Loss = 0.0049
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 38.0500%.
+Episode 5: Final Reward = -16.1605, New Accuracy = 61.9500, Error Rate = 38.0500, policy Loss = -0.2458, Value Loss = 0.0147
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 40.2000%.
+Episode 6: Final Reward = -15.3220, New Accuracy = 59.8000, Error Rate = 40.2000, policy Loss = -0.2505, Value Loss = 0.0146
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 44.1500%.
+Episode 7: Final Reward = -13.7015, New Accuracy = 55.8500, Error Rate = 44.1500, policy Loss = -0.0971, Value Loss = 0.0048
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 44.1500%.
+Episode 8: Final Reward = -12.5515, New Accuracy = 55.8500, Error Rate = 44.1500, policy Loss = 0.1054, Value Loss = 0.0050
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 46.9500%.
+Episode 9: Final Reward = -12.3495, New Accuracy = 53.0500, Error Rate = 46.9500, policy Loss = 0.1997, Value Loss = 0.0102
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 50.1500%.
+Episode 10: Final Reward = -11.3215, New Accuracy = 49.8500, Error Rate = 50.1500, policy Loss = 0.2094, Value Loss = 0.0107
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 48.2500%.
+Episode 11: Final Reward = -10.8325, New Accuracy = 51.7500, Error Rate = 48.2500, policy Loss = 0.1443, Value Loss = 0.0062
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 49.1000%.
+Episode 12: Final Reward = -10.2310, New Accuracy = 50.9000, Error Rate = 49.1000, policy Loss = 0.0519, Value Loss = 0.0024
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 50.8500%.
+Episode 13: Final Reward = -10.6285, New Accuracy = 49.1500, Error Rate = 50.8500, policy Loss = -0.0393, Value Loss = 0.0019
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 48.7000%.
+Episode 14: Final Reward = -9.8070, New Accuracy = 51.3000, Error Rate = 48.7000, policy Loss = -0.0746, Value Loss = 0.0025
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 49.6500%.
+Episode 15: Final Reward = -9.4965, New Accuracy = 50.3500, Error Rate = 49.6500, policy Loss = -0.1062, Value Loss = 0.0035
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 52.1000%.
+Episode 16: Final Reward = -10.6810, New Accuracy = 47.9000, Error Rate = 52.1000, policy Loss = -0.1375, Value Loss = 0.0047
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 50.5500%.
+Episode 17: Final Reward = -9.6255, New Accuracy = 49.4500, Error Rate = 50.5500, policy Loss = -0.1040, Value Loss = 0.0032
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 49.0000%.
+Episode 18: Final Reward = -9.9400, New Accuracy = 51.0000, Error Rate = 49.0000, policy Loss = -0.0841, Value Loss = 0.0024
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 51.3500%.
+Episode 19: Final Reward = -10.2835, New Accuracy = 48.6500, Error Rate = 51.3500, policy Loss = -0.0460, Value Loss = 0.0015
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.0500%.
+Episode 20: Final Reward = -9.5005, New Accuracy = 46.9500, Error Rate = 53.0500, policy Loss = -0.0103, Value Loss = 0.0011
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.4000%.
+Episode 21: Final Reward = -9.2540, New Accuracy = 45.6000, Error Rate = 54.4000, policy Loss = 0.0113, Value Loss = 0.0010
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.3000%.
+Episode 22: Final Reward = -9.9230, New Accuracy = 46.7000, Error Rate = 53.3000, policy Loss = 0.0241, Value Loss = 0.0010
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.7000%.
+Episode 23: Final Reward = -10.4270, New Accuracy = 46.3000, Error Rate = 53.7000, policy Loss = 0.0231, Value Loss = 0.0010
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 51.5500%.
+Episode 24: Final Reward = -10.9655, New Accuracy = 48.4500, Error Rate = 51.5500, policy Loss = 0.0231, Value Loss = 0.0009
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.9500%.
+Episode 25: Final Reward = -11.0995, New Accuracy = 46.0500, Error Rate = 53.9500, policy Loss = 0.0173, Value Loss = 0.0008
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.1000%.
+Episode 26: Final Reward = -10.4010, New Accuracy = 46.9000, Error Rate = 53.1000, policy Loss = 0.0261, Value Loss = 0.0009
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.7000%.
+Episode 27: Final Reward = -10.8170, New Accuracy = 46.3000, Error Rate = 53.7000, policy Loss = 0.0129, Value Loss = 0.0007
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.5000%.
+Episode 28: Final Reward = -10.1750, New Accuracy = 46.5000, Error Rate = 53.5000, policy Loss = 0.0143, Value Loss = 0.0007
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 52.8000%.
+Episode 29: Final Reward = -10.3080, New Accuracy = 47.2000, Error Rate = 52.8000, policy Loss = 0.0093, Value Loss = 0.0005
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 52.9000%.
+Episode 30: Final Reward = -11.1890, New Accuracy = 47.1000, Error Rate = 52.9000, policy Loss = -0.0014, Value Loss = 0.0005
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 51.1000%.
+Episode 31: Final Reward = -9.8510, New Accuracy = 48.9000, Error Rate = 51.1000, policy Loss = 0.0056, Value Loss = 0.0005
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 51.8000%.
+Episode 32: Final Reward = -10.4580, New Accuracy = 48.2000, Error Rate = 51.8000, policy Loss = -0.0033, Value Loss = 0.0005
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.5500%.
+Episode 33: Final Reward = -10.2655, New Accuracy = 45.4500, Error Rate = 54.5500, policy Loss = -0.0045, Value Loss = 0.0004
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.5500%.
+Episode 34: Final Reward = -10.3955, New Accuracy = 45.4500, Error Rate = 54.5500, policy Loss = -0.0104, Value Loss = 0.0004
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.5000%.
+Episode 35: Final Reward = -10.2350, New Accuracy = 46.5000, Error Rate = 53.5000, policy Loss = -0.0111, Value Loss = 0.0004
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 53.5000%.
+Episode 36: Final Reward = -10.8450, New Accuracy = 46.5000, Error Rate = 53.5000, policy Loss = -0.0161, Value Loss = 0.0004
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.1500%.
+Episode 37: Final Reward = -10.1215, New Accuracy = 45.8500, Error Rate = 54.1500, policy Loss = -0.0122, Value Loss = 0.0003
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.7500%.
+Episode 38: Final Reward = -9.6575, New Accuracy = 45.2500, Error Rate = 54.7500, policy Loss = -0.0086, Value Loss = 0.0003
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 55.4500%.
+Episode 39: Final Reward = -9.4645, New Accuracy = 44.5500, Error Rate = 55.4500, policy Loss = -0.0062, Value Loss = 0.0003
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 54.9500%.
+Episode 40: Final Reward = -9.3295, New Accuracy = 45.0500, Error Rate = 54.9500, policy Loss = -0.0030, Value Loss = 0.0003
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 55.5000%.
+Episode 41: Final Reward = -9.6250, New Accuracy = 44.5000, Error Rate = 55.5000, policy Loss = -0.0027, Value Loss = 0.0003
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 55.9000%.
+Episode 42: Final Reward = -8.8190, New Accuracy = 44.1000, Error Rate = 55.9000, policy Loss = 0.0038, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 56.7000%.
+Episode 43: Final Reward = -8.6970, New Accuracy = 43.3000, Error Rate = 56.7000, policy Loss = 0.0051, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 57.6500%.
+Episode 44: Final Reward = -8.1965, New Accuracy = 42.3500, Error Rate = 57.6500, policy Loss = 0.0088, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 57.4500%.
+Episode 45: Final Reward = -8.4745, New Accuracy = 42.5500, Error Rate = 57.4500, policy Loss = 0.0075, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 59.7000%.
+Episode 46: Final Reward = -7.4070, New Accuracy = 40.3000, Error Rate = 59.7000, policy Loss = 0.0130, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 58.6500%.
+Episode 47: Final Reward = -7.3965, New Accuracy = 41.3500, Error Rate = 58.6500, policy Loss = 0.0105, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 58.7500%.
+Episode 48: Final Reward = -6.5875, New Accuracy = 41.2500, Error Rate = 58.7500, policy Loss = 0.0126, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 59.2500%.
+Episode 49: Final Reward = -5.7825, New Accuracy = 40.7500, Error Rate = 59.2500, policy Loss = 0.0137, Value Loss = 0.0002
+
+Initial (Episode-Start) Error Rate on Validation Data: 54.00%
+Episode Terminated. Final Error Rate: 59.7500%.
+Episode 50: Final Reward = -5.8775, New Accuracy = 40.2500, Error Rate = 59.7500, policy Loss = 0.0085, Value Loss = 0.0002
+
+======================================================================
+FINAL RESULTS
+======================================================================
+Training finished. Best error rate achieved: 3.4500%

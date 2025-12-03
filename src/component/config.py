@@ -1,5 +1,13 @@
-# Central config for hyperparameters
-
+#---------------- Device configuration --------------
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#---------------- Data configuration --------------
+# can accept "mnist" or "cifar10" or "cifar100"
+data_source = 'mnist'
+#---------------- Downstream model configuration --------------
+# can accept "cnn" or "mlp" or "resnet18"
+model_name = 'mlp'
+#---------------- Central config for hyperparameters--------------
 # Training parameters
 episodes = 50
 num_labeled = 1000

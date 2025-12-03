@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # Virtual environment
+.venv/
 venv/
 env/
 ENV/
@@ -30,7 +31,9 @@ logs/
 experiments/
 checkpoints/
 *.pth
+*.tfevents.*
 *.pt
+*.json
 
 # Jupyter notebooks
 .ipynb_checkpoints/
