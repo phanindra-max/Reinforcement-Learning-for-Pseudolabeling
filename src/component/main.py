@@ -33,7 +33,7 @@ def main():
 
     # Initialize the best error rate tracking
     best_error_rate = float('inf')
-    save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"trained_models_{model_name}_{data_source}")
+    save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trained_models')
     os.makedirs(save_dir, exist_ok=True)
 
     print(f"{'=' * 70}")
@@ -70,9 +70,11 @@ def main():
             final_reward = info['final_reward']
             new_accuracy = info['new_accuracy']
             error_rate = info['error_rate']
-
+            
+            writer.add_scalar("Reward/Final", final_reward, episode)
             # Log the sum of the trajectory rewards for comparison
-            writer.add_scalar("Reward/Episode", episode_reward, episode)
+            writer.add_scalar("Reward/Episode", sum(sampled_rewards), episode)
+            
             writer.add_scalar("Accuracy/New", new_accuracy*100, episode)
             writer.add_scalar("Error Rate", error_rate*100, episode)
             
@@ -84,16 +86,18 @@ def main():
             if error_rate < best_error_rate:
                 best_error_rate = error_rate
                 print(f"New best error rate: {best_error_rate*100:.4f}% - Saving models...")
-                env.downstream_model.save_model(name='best_downstream', save_dir=save_dir) # Save downstream model
-                agent.save_model(name='best_policy_gradient', save_dir=save_dir) # Save policy gradient models
+                # Save downstream model
+                env.downstream_model.save_model(name='best_downstream', save_dir=save_dir)
+                # Save policy gradient models
+                agent.save_model(name='best_policy_gradient', save_dir=save_dir)
 
         # Log policy and value losses
         writer.add_scalar("Loss/policy", policy_loss, episode)
         writer.add_scalar("Loss/Value", value_loss, episode)
 
-    print(f"{'=' * 70}")
-    print("FINAL RESULTS")
-    print(f"{'=' * 70}")
+    env.close()
+    writer.close()
+    print(f"Training finished. Best error rate achieved: {best_error_rate*100:.4f}%")
 
     env.close()
     writer.close()
