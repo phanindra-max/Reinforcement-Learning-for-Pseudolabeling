@@ -81,7 +81,7 @@ Q -->|Yes| F
 Q -->|No| R[End Episode and Save Models]
 ```
 
-NOTE: mermaid plugin needs to be installed to view on Pycharm / Visual Studio Code editor. Else, snip of similar one drawn in miro board can be refered at `presentation/FinalPresentation/RLPL/imagesFlow_Diagram.png`
+NOTE: mermaid plugin needs to be installed to view on Pycharm / Visual Studio Code editor. Else, snip of similar one drawn in miro board can be refered at `presentation/FinalPresentation/RLPL/images/Flow_Diagram.png`
 
 ---
 
@@ -98,7 +98,7 @@ capstone
 │   └── FinalPresentation/                  # Final Presentation
 │       ├── RLPL/                           # Reference code and images for .tex files
 │       ├── main.tex                        # main presentation in .tex
-│       └── PreliminaryPresentation.pdf     # presentation in pdf
+│       └── FinalPresentation.pdf           # presentation in pdf
 ├── reports/                                # Final report in latex
 ├── research_paper/                         # Final research paper in latex
 ├── src/
