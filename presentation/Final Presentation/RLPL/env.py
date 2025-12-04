@@ -70,21 +70,6 @@ class PseudoLabelEnv(gym.Env):
     # RESET
     # -----------------------------
     def reset(self, *, seed=None, options=None):
-        """
-        Reset the environment to start a new episode.
-        Resets:
-            - current index and error rate
-            - pseudo-label buffers
-            - unlabeled data order (shuffle)
-            - classifier to initial trained state
-
-        Args:
-            seed (int, optional): Random seed for reproducibility
-            options (dict, optional): Additional options (not used)
-
-        Returns:
-            tuple: Initial state observation and empty info dictionary
-        """
         super().reset(seed=seed)
         self.current_idx = 0
         self.newly_pseudo_labeled_data = [] # current pseudo-label batch
@@ -99,29 +84,13 @@ class PseudoLabelEnv(gym.Env):
 
         # Reset the downstream model to initial baseline state
         self.downstream_model.load_state_dict(self.initial_model_state)
-        print("Initial (Episode-Start) Error Rate on Validation Data: {:.2f}%".format(self.baseline_error_rate * 100))
         return self.get_next_state(), {}
 
     # -----------------------------
     # STEP
     # -----------------------------
     def step(self, action):
-        """
-        - Execute one step in the environment based on the agent's action by processing one unlabeled sample.
-        - The agent chooses whether to assign a pseudo-label (0–(num_classes-1)) or skip the sample (last action index) (immediately receive penalty reward).
-        - Once enough pseudo-labels are collected or the dataset ends, the classifier is retrained and reward is computed.
-
-        Args:
-            action (int): Agent-selected action indicating class or skip.
-
-        Returns:
-            tuple: (next_state, reward, terminated, truncated, info)
-        """
-
-        img_idx = self.current_idx
-        reward = 0.0
-
-        # if running baseline experiment with true labels
+        img_idx, reward = self.current_idx, 0.0
         if self.use_true_labels:
             chosen_label = self.unlabeled_y[img_idx]
             self.newly_pseudo_labeled_data.append((self.unlabeled_x[img_idx], chosen_label))
@@ -132,43 +101,21 @@ class PseudoLabelEnv(gym.Env):
             else: # skip
                 reward += self.calculate_reward(0.0, 0.0, skip_penalty=True)
 
-        # if end of unlabeled data or batch full, train downstream model and calculate reward
         if len(self.newly_pseudo_labeled_data) and ((self.current_idx+1 >= len(self.unlabeled_x)) or (len(self.newly_pseudo_labeled_data) == 512)):
             old_error_rate = self.current_error_rate
-
-            # combine previous + current pseudo-label batch
             combined_pseudo_labeled_data = self.all_pseudo_labeled_data + self.newly_pseudo_labeled_data
-            # Train the model: Labeled data + combined batch of pseudo-labels
-            self.downstream_model.train_model(
-                (self.labeled_x, self.labeled_y),
-                combined_pseudo_labeled_data
-            )
-          
-            # Evaluate new error rate and calculate reward
+            self.downstream_model.train_model((self.labeled_x, self.labeled_y), combined_pseudo_labeled_data)
             new_accuracy = self.downstream_model.evaluate_model(self.val_x, self.val_y)
-            new_error_rate = 1.0 - new_accuracy
+            new_error_rate = self.current_error_rate = 1.0 - new_accuracy
             reward += self.calculate_reward(old_error_rate, new_error_rate)
-
-            self.current_error_rate = new_error_rate
-          
-            # Move current batch to all_pseudo_labeled_data
             self.all_pseudo_labeled_data.extend(self.newly_pseudo_labeled_data)
             self.newly_pseudo_labeled_data = [] # Clear the buffer for the next batch
 
-        # update counters
-        self.episode_reward += reward
-        self.current_idx += 1
-        terminated = (self.current_idx >= len(self.unlabeled_x))
-        info = {}
-      
-        if terminated:
-            info['new_accuracy'] = new_accuracy
-            info['error_rate'] = new_error_rate
-            info['final_reward'] = self.episode_reward
-            print(f"Episode Terminated. Final Error Rate: {new_error_rate*100:.4f}%.")
-        
-        next_state = self.get_next_state()
-        return next_state, reward, terminated, False, info
+        self.episode_reward, self.current_idx = self.episode_reward+reward, self.current_idx+1
+        info, terminated = {}, (self.current_idx >= len(self.unlabeled_x))
+        if terminated: info['error_rate'], info['final_reward'] = new_error_rate, self.episode_reward
+
+        return self.get_next_state(), reward, terminated, False, info
     
     # -----------------------------
     # Reward function
