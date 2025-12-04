@@ -53,7 +53,6 @@
 }
 \institute{George Washington University}
 \date{}
-%\date{\today}
 
 % Footer Details
 \setbeamertemplate{footline}{
@@ -88,13 +87,10 @@
 \begin{frame}{Introduction}
   \begin{itemize}
     \item \textbf{Problem:} Labeled data is limited and costly to obtain.
-      %Labeled data is often scarce, and manual annotation is expensive and time-intensive.
       \\~\\
     \item \textbf{Challenge:} Traditional pseudo-labeling often propogates errors.
-      %Conventional pseudo-labeling methods risk error propagation, degrading model performance.
       \\~\\
     \item \textbf{Idea:} Use Reinforcement Learning (RL) to adaptively select pseudo-labels and improve error rate.
-      %Employ Reinforcement Learning (RL) to develop an adaptive pseudo-labeling strategy that optimizes sample selection and enhances model accuracy.
   \end{itemize}
 \end{frame}
 
@@ -134,6 +130,16 @@
   \end{columns}
 \end{frame}
 
+%--------------------------
+
+\begin{frame}
+  \centering 
+  \large Approach-1 \\~\\
+  \large Reinforcement Learning Using Policy Gradient
+\end{frame}
+
+%--------------------------
+
 \begin{frame}{MDP Formulation}
   \begin{block}{State}
     Image features, model predictions, entropy (uncertainty).
@@ -152,22 +158,7 @@
     \begin{center}
       $\mathcal R_{t} = -(e_{t} - e_{t-1})$
     \end{center}
-
   \end{block}
-\end{frame}
-
-%--------------------------
-
-\section{Training Flow}
-\begin{frame}{Workflow}
-  \begin{enumerate}
-    \item \textbf{Load} labeled and unlabeled MNIST data. \\~\\
-    \item \textbf{Initiate} RL environment and agent.\\~\\
-    \item RL agent selects \textbf{pseudo-label} actions. \\~\\
-    \item \textbf For RLGSSL: generate mixup samples, compute consistency reward, update classifier/policy jointly. \\~\\
-    \item \textbf{Retrain} downstream model with newly labeled data. \\~\\
-    \item \textbf{Reward} is assigned based on downstream model's error rate.
-  \end{enumerate}
 \end{frame}
 
 %--------------------------
@@ -184,6 +175,10 @@
   \includegraphics[width=0.7\linewidth]{RLPL/images/workflow.jpg} \\
 \end{frame}
 
+%--------------------------
+\begin{frame}{Flow Diagram}
+  \includegraphics[width=1.0\linewidth]{RLPL/images/Flow_Diagram.png} \\
+\end{frame}
 %--------------------------
 
 \section{PseudoCode}
@@ -202,12 +197,11 @@
       \While{not done}
       \State action $\leftarrow$ agent.select\_action(state)
       \State $(\text{next\_state},\ \text{reward},\ \text{terminated},\ \text{info}) \leftarrow \text{env.step(action)}$
-      % \State agent.remember(state, action, reward, next\_state, done)
       \State state $\leftarrow$ next\_state
       \State done $\leftarrow$ terminated
       \EndWhile
       \State agent.update()
-      \State accuracy $\leftarrow$ env.evaluate()
+      \State error rate $\leftarrow$ env.evaluate()
       \EndFor
       \State env.close()
     \end{algorithmic}
@@ -220,38 +214,33 @@
 
 \begin{frame}[fragile]{env.reset()}
   \begin{itemize}
-      \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont,firstline=67, lastline=79]{RLPL/env.py} \\~\\
+      \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont,firstline=72, lastline=87]{RLPL/env.py} \\~\\
     \item \textbf{Input:} Random seed and options. \\~\\
     \item \textbf{Functionality:} Resets the environment. \\~\\ %by
-      \begin{itemize}
-          %\item resetting counters and rewards
-          %\item shuffling unlabeled dataset
-          %\item recalculating model's baseline accuracy on validation data
-      \end{itemize}
     \item \textbf{Output:} Initial environment state and empty info dictionary.
   \end{itemize}
 \end{frame}
 
+%--------------------------
+
 \begin{frame}{model.policy()}
-  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=73, lastline=73]{RLPL/model.py}
-  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=82, lastline=88]{RLPL/model.py} \\~\\
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=408, lastline=408]{RLPL/model.py}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=418, lastline=423]{RLPL/model.py} \\~\\
   \begin{itemize}
     \item \textbf{Input:} Current state ($S_{t}$).\\~\\
-    \item \textbf{Functionality:} Action (pseudolabel) is selected based on logits obtained from policy network. 
-    \begin{center}
-      $a \in \mathcal{A}(s)$
-    \end{center} \\~\\
-      \begin{itemize}
-          %\item Converts the state to a tensor
-          %\item passes it through the policy network to obtain logits
-          %\item creates a categorical probability distribution, and samples one action from it.
-      \end{itemize}
+    \item \textbf{Functionality:} Action (pseudolabel) is selected based on logits obtained from policy network.
+      \begin{center}
+        $a \in \mathcal{A}(s)$
+      \end{center} \\~\\
     \item \textbf{Output:} Selected action as integer.
   \end{itemize}
 \end{frame}
 
+
+%--------------------------
+
 \begin{frame}{env.step()}
-  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=84, lastline=111]{RLPL/env.py}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=92, lastline=118]{RLPL/env.py}
 \end{frame}
 
 \begin{frame}[fragile]{env.step()}
@@ -261,14 +250,15 @@
       \begin{itemize}
         \item Computes reward based on prediction and action.
         \item Updates pseudo-labeled data.
-        \item Trains downstream model at episode end.
       \end{itemize} \\~\\
     \item \textbf{Output:} Returns next state, total reward, termination flag, and performance info (error rate, final reward).
   \end{itemize}
 \end{frame}
 
+%--------------------------
+
 \begin{frame}{model.update()}
-  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=124, lastline=149]{RLPL/model.py}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=460, lastline=485]{RLPL/model.py}
 \end{frame}
 
 \begin{frame}[fragile]{model.update()}
@@ -284,17 +274,17 @@
   \end{itemize}
 \end{frame}
 
+%--------------------------
+
 \begin{frame}{main.py (Bringing everything together)}
-  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=6, lastline=28]{RLPL/main.py}
+  \lstinputlisting[basicstyle=\ttfamily\fontsize{5.5}{7.5}\selectfont, firstline=10, lastline=38]{RLPL/main.py}
 \end{frame}
-   
 
 %------------------------------
 
 \section{Results and Insights}
 \begin{frame}{Key Observations}
   \begin{itemize}
-    \item RL-based pseudo-labeling improves early-stage learning performance.
     \item CNN benefits more from RL guidance than ResNet due to weaker baseline.
     \item Performance degradation observed after multiple episodes.
     \item \textbf{Key Bottleneck:} Reward design and confirmation bias.
@@ -303,42 +293,107 @@
   \vspace{0.3cm}
   \renewcommand{\arraystretch}{1.3}
   \centering
-  \begin{tabular}{lcc}
-    \toprule
-    \textbf{Model} & \textbf{MNIST (\%)} & \textbf{CIFAR-10 (\%)} \\
-    \midrule
-    CNN Baseline & 96.55 & 65.60 \\
-    CNN + RL & \textbf{98.12} & \textbf{68.40} \\
-    ResNet Baseline & 98.76 & 74.10 \\
-    ResNet + RL & 98.12 & 73.80 \\
-    \bottomrule
-  \end{tabular}
+  \begin{table}[h]
+    \centering
+    \begin{tabular}{lcc}
+      \hline
+      \textbf{Model} & \textbf{MNIST} & \textbf{CIFAR-10} \\
+      \hline
+      CNN      & 3.45\%  & 34.40\% \\
+      MLP      & 37.40\% & 59.60\% \\
+      ResNet18 & 5.80\%  & 25.75\% \\
+      \hline
+    \end{tabular}
+    \caption{Performance comparison on MNIST and CIFAR-10}
+  \end{table}
 
   \vspace{0.2cm}
-  \captionof*{table}{\textbf{Final Classification Accuracy Comparison}}
+  \captionof*{table}{\textbf{Final Classification Error rate Comparison}}
 \end{frame}
 
 % ----------------------------
 
-\begin{frame}{What We Learned Since Midterm}
-  \begin{itemize}
-    \item RL improves pseudo-label selection primarily in early epochs.
-    \item Performance degradation occurs due to error reinforcement.
-    \item Reward shaping has higher impact than network architecture.
-    \item CNN shows stronger gains from RL guidance than ResNet.
-    \item RL training is significantly more computationally expensive.
-  \end{itemize}
+\begin{frame}
+  \centering
+  \large Approach-2 \\~\\
+  \large Reinforcement Learning Guided Semi-Supervised Learning \\(RLGSSL) \\~\\
+  \includegraphics[width=0.7\linewidth]{RLPL/images/RLGSSL_titleimage.png}
 \end{frame}
 
-%--------------------------------
+%--------------------------
+\section{PseudoCode RLGSSL}
+\begin{frame}{PseudoCode RLGSSL}
 
-\section{Discussion}
-\begin{frame}{Discussion}
+\begin{algorithm}[H]
+\caption{RL-Guided SSL}
+\scriptsize
+\begin{algorithmic}
+
+\Require $\mathcal{D}^l$, $\mathcal{D}^u$, and extended $\widetilde{\mathcal{D}}^l$; initialized $\theta_S$, $\theta_T$; hyperparameters
+
+\For{iteration $= 1$ to maxiters}
+
+    \For{each $x_i^u \in \mathcal{D}^u$}
+        \State Compute soft pseudo-label vector $y_i^u = P_{\theta_T}(x_i^u)$ to form $(x_i^u, y_i^u)$
+    \EndFor
+
+    \State Generate mixup data $\mathcal{D}^m = (X^m, Y^m)$ on $\mathcal{D}^u$ and $\widetilde{\mathcal{D}}^l$ using with shuffling
+
+    \For{step $= 1$ to maxsteps}
+        \State Draw a batch of data $B = \{(x_i^m, y_i^m)\}$ from $\mathcal{D}^m$
+        \State Calculate the reward function $\mathcal{R}(\cdot ; sg[\theta_S])$ using the batch $B$
+        \State Compute the objective
+        \State Update the policy parameters $\theta_S$ via gradient descent
+        \State Update teacher model $\theta_T$ via EMA
+    \EndFor
+
+\EndFor
+
+\end{algorithmic}
+\end{algorithm}
+\end{frame}
+
+% ----------------------------
+
+\section{Results and Insights RLGSSL}
+\begin{frame}{Key Observations RLGSSL}
   \begin{itemize}
-    \item RL dynamically adapts pseudo-label selection beyond static confidence thresholds.
-    \item Early performance gains confirm RL’s potential for label efficiency.
-    \item Degradation highlights the need for long-term reward stabilization.
-    \item ResNet stability limits the impact of RL compared to CNN.
+    \item Performance is affected by too many hyperparameters.
+    \item \textbf{Key Bottleneck:} Architectural Complexity.
+  \end{itemize}
+
+  \vspace{0.3cm}
+  \renewcommand{\arraystretch}{1.3}
+  \centering
+  \begin{table}[H]
+    \centering
+    \begin{tabular}{cccccl}
+      \hline
+      \textbf{Epoch} & \textbf{Error (\%)} & \textbf{Loss} & \textbf{RL Loss} & \textbf{Reward}\\
+      \hline
+      50 (warmup) & 53.61 & 0.137 & -0.00533 & -0.0305168 \\
+      100 & 74.02 & 0.233 & 0.018 & -0.0298085 \\
+      150 & 66.56 & 0.215 & 0.013 & -0.029022 \\
+      250 & 59.48 & 0.188 & 0.005 & -0.0290487 \\
+      350 & 61.51 & 0.1601 & -0.00464 & -0.0283258 \\
+      450 & 58.59 & 0.13346 & -0.03042 & -0.0281552\\
+      \hline
+    \end{tabular}
+    \caption{RLGSSL training progression on CIFAR-10 (1000 labels).}
+    \label{tab:rlgssl_training}
+  \end{table}
+
+\end{frame}
+
+% ----------------------------
+
+\begin{frame}{Updates from Mid-Term}
+  \begin{itemize}
+    \item Built a model and data agnostic pseudo-labeling system
+    \item Updated and refactored core environment methods
+    \item Excluded true labels from the training process
+    \item Experimented with multiple loss functions from the RLGSSL paper
+    \item Developed a custom environment that is ready to be registered with OpenAI Gym
   \end{itemize}
 \end{frame}
 
@@ -348,10 +403,9 @@
 \begin{frame}{Conclusion}
   \begin{itemize}
     \item Successfully demonstrated RL-based pseudo-labeling in semi-supervised learning.
-    \item RL improves early learning by selecting high-confidence unlabeled samples.
     \item Long-term training stability remains a critical challenge.
     \item Reward design plays a central role in RL-based pseudo-labeling.
-    \item The framework shows strong research potential but needs stability optimization.
+    \item The framework shows strong research potential but needs optimization.
   \end{itemize}
 \end{frame}
 
@@ -360,31 +414,31 @@
 \section{Limitations}
 \begin{frame}{Limitations}
   \begin{itemize}
-    \item \textbf{Performance Degradation}: Accuracy drops after several episodes due to confirmation bias.
+    \item \textbf{Performance Degradation}: Error rate increases after several episodes due to confirmation bias.
     \item \textbf{Reward Sensitivity}: Small reward changes cause unstable training.
     \item \textbf{Computational Cost}: RL training is 3--4$\times$ slower than standard pseudo-labeling.
     \item \textbf{Noisy Labels}: Early incorrect pseudo-labels propagate errors.
   \end{itemize}
 \end{frame}
 
-
 %---------------------------
 
 \section{Future Scope}
 \begin{frame}{Future Scope}
   \begin{itemize}
-    \item Implement PPO and Trust Region Policy Optimization for improved stability.
-    \item Introduce uncertainty-aware and entropy-calibrated rewards.
-    \item Apply curriculum learning by delaying hard samples.
+    \item Implement Proximal Policy Optimization (PPO) for improved stability.
+    \item Experiment with diverse reward strategies.
     \item Extend to domain adaptation and real-world noisy datasets.
-    \item Add visualization dashboards for reward and policy tracking.
+    \item Publish the custom PseudoLabelEnv on OpenAI Gym
   \end{itemize}
 \end{frame}
 
+%--------------------------
 
 \begin{frame}{Thank You}
   \centering
   \textbf{Questions?}
 \end{frame}
 
+%--------------------------
 \end{document}

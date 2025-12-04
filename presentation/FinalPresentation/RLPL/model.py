@@ -458,14 +458,7 @@ class PolicyGradient:
         )
     
     def update(self, sampled_states, sampled_actions, sampled_rewards):
-        '''
-        Update policy and value networks based on episode data
-        
-        Args:
-            sampled_states: List of states from episode
-            sampled_actions: List of actions taken
-            sampled_rewards: List of rewards received
-        '''
+
         # Compute advantages
         rewards_to_go, values, adv = self.compute_advantage(sampled_states, sampled_rewards)
         
