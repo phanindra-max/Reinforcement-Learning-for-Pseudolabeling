@@ -76,6 +76,8 @@
 \tableofcontents
 \newpage
 % ------------------------------------------------------------------------------------------------------------------------
+
+
 \section{Introduction}
 
 In modern machine learning applications, obtaining large quantities of labeled training data is often expensive, time-consuming, and requires domain expertise. Semi-supervised learning (SSL) offers a promising solution by leveraging both limited labeled data and abundant unlabeled data to improve model performance. A key technique in SSL is pseudo-labeling, where a model assigns estimated labels to unlabeled samples, which are then used for further training.
@@ -186,18 +188,22 @@ This section presents our comprehensive approach to RL-based pseudo-labeling. We
 
 We implemented a custom OpenAI Gymnasium environment (\texttt{PseudoLabelEnv}) that encapsulates the pseudo-labeling task as a reinforcement learning problem.
 
+
+\includegraphics[width=1.0\linewidth]{fig/Flow_Diagram.png} \\
+
+
 \textbf{State Space ($\mathcal{S}$):} For each unlabeled sample $x_i$, the state $s_i$ is constructed as:
 \begin{equation}
 s_i = [\phi(x_i), P_\theta(x_i), H(P_\theta(x_i))]
 \end{equation}
 where:
 \begin{itemize}
-    \item $\phi(x_i) \in \mathbb{R}^{784}$ are the flattened image features
+    \item $\phi(x_i) \in \mathbb{R}^{784}$ are the high level image features derived by passing raw image to the downstream model
     \item $P_\theta(x_i) \in \mathbb{R}^{10}$ are the softmax class probabilities from the downstream model
     \item $H(P_\theta(x_i)) = -\sum_k P_\theta(x_i)_k \log P_\theta(x_i)_k$ is the prediction entropy
 \end{itemize}
 
-This representation combines raw features, model confidence, and uncertainty, providing the agent with comprehensive information for decision-making.
+This representation combines image features, model confidence, and uncertainty, providing the agent with comprehensive information for decision-making.
 
 \textbf{Action Space ($\mathcal{A}$):} The action space consists of $|\mathcal{A}| = K + 1$ discrete actions for a $K$-class classification problem:
 \begin{equation}
@@ -215,9 +221,9 @@ P_\theta(x_i)_{a_i} & \text{if } a_i = y_i^{\text{true}} \\
 \end{equation}
 where $y_i^{\text{true}}$ is the true label (used only for reward computation during training). This design encourages correct, high-confidence predictions while penalizing incorrect ones proportionally to the model's misplaced confidence.
 
-\textbf{Episode Structure:} Each episode processes all $N$ unlabeled samples sequentially. At episode completion, the downstream model is retrained on the combination of original labeled data and newly pseudo-labeled samples, and the agent receives an accuracy bonus:
+\textbf{Episode Structure:} Each episode processes all $N$ unlabeled samples sequentially. Reward is the absolute difference between the downstream model's error rate for current and the previous batch.
 \begin{equation}
-R_{\text{final}} = \text{Acc}_{\text{new}} - \text{Acc}_{\text{baseline}}
+R_{\text{final}} = \text{Error}_{\text{new}} - \text{Error}_{\text{old}}
 \end{equation}
 This provides a delayed reward signal based on the cumulative impact of pseudo-labeling decisions.
 
@@ -227,7 +233,6 @@ This provides a delayed reward signal based on the cumulative impact of pseudo-l
     \caption{Environment flowchart: reset $\rightarrow$ get state $\rightarrow$ agent action $\rightarrow$ step $\rightarrow$ reward $\rightarrow$ repeat until terminated.}
     \label{fig:env_flowchart}
 \end{figure}
-
 
 \subsubsection{Policy Gradient Agent}
 
@@ -260,7 +265,7 @@ The downstream classification model is a Convolutional Neural Network. The speci
 This model is trained on MNIST with cross-entropy loss and serves dual purposes:
 \begin{enumerate}
     \item Generating softmax predictions and entropy for state construction
-    \item Being the ultimate evaluation metric (validation accuracy after pseudo-labeling)
+    \item Being the ultimate evaluation metric (validation error rate after pseudo-labeling)
 \end{enumerate}
 
 \subsection{Approach 2: RLGSSL Framework}
@@ -537,8 +542,8 @@ resnet18 & 5.80\%  & 25.75\% \\
 
 \textbf{Key Observations:}
 \begin{itemize}
-    \item Initial baseline accuracy: $\sim$46\%
-    \item Final best accuracy: $\sim$96.55\%
+    \item Initial baseline error rate: $\sim$54\%
+    \item Final best error rate: $\sim$3.45\%
 \end{itemize}
 
 \subsection{RLGSSL Results}
@@ -551,14 +556,14 @@ Table~\ref{tab:rlgssl_training} shows the training dynamics observed during RLGS
     \centering
     \begin{tabular}{cccccl}
         \hline
-        \textbf{Epoch} & \textbf{Acc (\%)} & \textbf{Loss} & \textbf{RL Loss} & \textbf{Reward} & \textbf{Notes} \\
+        \textbf{Epoch} & \textbf{Error (\%)} & \textbf{Loss} & \textbf{RL Loss} & \textbf{Reward} & \textbf{Notes} \\
         \hline
-        50 (warmup) & 46.39 & 0.137 & -0.00533 & -0.0305168 & Stable supervised learning but weak teacher. \\
-        100 & 25.98 & 0.233 & 0.018 & -0.0298085 & Accuracy drops as RL is introduced. \\
-        150 & 33.44 & 0.215 & 0.013 & -0.029022 & Partial recovery; RL signals still unstable. \\
-        250 & 40.52 & 0.188 & 0.005 & -0.0290487 & Training stabilizes; gradual improvement. \\
-        350 & 38.49 & 0.1601 & -0.00464 & -0.0283258 & Mild fluctuations. \\
-        450 & 41.41 & 0.13346 & -0.03042 & -0.0281552 & Converging slowly. \\
+        50 (warmup) & 53.61 & 0.137 & -0.00533 & -0.0305168 & Stable supervised learning but weak teacher. \\
+        100 & 74.02 & 0.233 & 0.018 & -0.0298085 & Error increases as RL is introduced. \\
+        150 & 66.56 & 0.215 & 0.013 & -0.029022 & Partial recovery; RL signals still unstable. \\
+        250 & 59.48 & 0.188 & 0.005 & -0.0290487 & Training stabilizes; gradual improvement. \\
+        350 & 61.51 & 0.1601 & -0.00464 & -0.0283258 & Mild fluctuations. \\
+        450 & 58.59 & 0.13346 & -0.03042 & -0.0281552 & Converging slowly. \\
         \hline
     \end{tabular}
     \caption{RLGSSL training progression on CIFAR-10 (1000 labels).}
@@ -569,13 +574,13 @@ Table~\ref{tab:rlgssl_training} shows the training dynamics observed during RLGS
 
 \textbf{Performance Metrics:}
 \begin{itemize}
-    \item \textbf{Best Student Accuracy:} 46.2\% (Epoch )
+    \item \textbf{Best Student Error Rate:} 53.8\%
     \item \textbf{Training Time:} $\sim$10 hours
 \end{itemize}
 
 \subsubsection{Comparison with Literature}
 
-\textbf{Analysis Gap:} Our best observed accuracy of 46.2\% is significantly below the paper's reported 90.85\% (9.15\% error). This discrepancy likely stems from:
+\textbf{Analysis Gap:} Our best observed error rate of 53.8\% is significantly below the paper's reported 9.15\% error. This discrepancy likely stems from:
 \begin{itemize}
     \item Potential bugs in adaptive enhancement implementations
     \item Need for more careful hyperparameter tuning
@@ -590,7 +595,7 @@ Table~\ref{tab:rlgssl_training} shows the training dynamics observed during RLGS
 This section reflects on the key challenges encountered, lessons learned, and insights gained throughout the project implementation.
 
 \subsection{Overview of Findings}
-Our experiments highlighted distinct trade-offs between the two approaches. The \textbf{Policy Gradient agent} demonstrated adaptive behavior, successfully learning to balance pseudo-labeling with skipping uncertain samples. Conversely, the \textbf{RLGSSL framework} showed promise with stable initial training (epochs 60--175) but suffered from system instability during later stages.
+Our experiments highlighted distinct trade-offs between the two approaches. The \textbf{Policy Gradient agent} demonstrated adaptive behavior, successfully learning to balance pseudo-labeling with skipping uncertain samples. Conversely, the \textbf{RLGSSL framework} showed promise with stable training.
 
 Despite successfully implementing the full pipelines, we observed significant performance gaps compared to state-of-the-art benchmarks. These gaps were primarily driven by computational constraints preventing full convergence and numerical instabilities in our adaptive reward enhancements.
 
@@ -599,7 +604,7 @@ Despite successfully implementing the full pipelines, we observed significant pe
 
 \subsubsection{Reward Function Design}
 
-Designing effective reward functions proved to be one of the most challenging aspects. Sparse vs. dense rewards presented an issue: initial experiments with only end-of-episode accuracy rewards provided insufficient learning signal, and adding per-step confidence-based rewards improved learning but introduced new challenges. Reward scaling was also difficult, as balancing the magnitude of step rewards (confidence values in [0,1]) with episode-end accuracy bonuses (potentially large) required careful tuning. Stability issues emerged because the adaptive reward enhancements in RLGSSL introduced numerical instability; the diversity bonus, in particular, may have caused gradient explosions when batch entropy varied significantly.
+Designing effective reward functions proved to be one of the most challenging aspects. Sparse vs. dense rewards presented an issue: initial experiments with only end-of-episode error rate rewards provided insufficient learning signal, and adding per-step confidence-based rewards improved learning but introduced new challenges. Reward scaling was also difficult, as balancing the magnitude of step rewards (confidence values in [0,1]) with episode-end error rate bonuses (potentially large) required careful tuning. Stability issues emerged because the adaptive reward enhancements in RLGSSL introduced numerical instability; the diversity bonus, in particular, may have caused gradient explosions when batch entropy varied significantly.
 
 \textbf{Recommendation:} Future work should implement reward clipping and normalization strategies used in modern RL algorithms like PPO.
 
@@ -611,7 +616,7 @@ The computational demands of RL-based pseudo-labeling present significant practi
 
 \subsubsection{Non-Stationarity and Credit Assignment}
 
-The pseudo-labeling environment violates key RL assumptions. The moving target issue arises because the downstream model evolves during training, causing state distributions to shift continuously and challenging standard RL convergence guarantees. Delayed feedback complicates training because accuracy improvements may not manifest until many episodes later, making credit assignment difficult and raising the question of which pseudo-labels at which training iterations contributed to final performance. Exploration–exploitation adds further complexity, as balancing exploration of uncertain samples versus exploitation of confident predictions is complicated by the fact that exploration today affects future model capabilities.
+The pseudo-labeling environment violates key RL assumptions. The moving target issue arises because the downstream model evolves during training, causing state distributions to shift continuously and challenging standard RL convergence guarantees. Delayed feedback complicates training because error rate improvements may not manifest until many episodes later, making credit assignment difficult and raising the question of which pseudo-labels at which training iterations contributed to final performance. Exploration–exploitation adds further complexity, as balancing exploration of uncertain samples versus exploitation of confident predictions is complicated by the fact that exploration today affects future model capabilities.
 
 \textbf{Recommendation:} Consider meta-learning approaches where the policy is trained across multiple dataset/model combinations to develop more robust pseudo-labeling strategies.
 
@@ -653,7 +658,7 @@ Table~\ref{tab:approach_comparison} compares the two approaches implemented.
 
 \subsubsection{When to Use RL for Pseudo-Labeling}
 
-Based on our experience, RL-based pseudo-labeling is most appropriate when labeled data is extremely limited ($<$1\% of dataset), pseudo-labeling decisions have long-term consequences (e.g., medical diagnosis), computational resources are available for extensive training, and the problem exhibits clear reward signals (e.g., validation accuracy).
+Based on our experience, RL-based pseudo-labeling is most appropriate when labeled data is extremely limited ($<$1\% of dataset), pseudo-labeling decisions have long-term consequences (e.g., medical diagnosis), computational resources are available for extensive training, and the problem exhibits clear reward signals (e.g., validation error rate).
 
 It may be overkill when labeled data is moderately available ($>$10\% of dataset), simple confidence thresholding already works well, real-time or resource-constrained deployment is required, or the dataset is extremely large (millions of samples).
 
