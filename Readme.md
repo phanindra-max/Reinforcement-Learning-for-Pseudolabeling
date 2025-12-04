@@ -81,29 +81,39 @@ Q -->|Yes| F
 Q -->|No| R[End Episode and Save Models]
 ```
 
+NOTE: mermaid plugin needs to be installed to view on Pycharm / Visual Studio Code editor. Else, snip of similar one drawn in miro board can be refered at `presentation/FinalPresentation/RLPL/imagesFlow_Diagram.png`
+
 ---
 
 ## Project Structure
 
 ```
 capstone
-├── demo/                           # Presentation Recording
-├── presentation/                   # Preliminary and final presentation
-├── reports/                        # Final report in latex
-├── research_paper/                 # Final research paper in latex
+├── demo/                                   # Presentation Recording
+├── presentation/                   
+│   ├── PreliminaryPresentation/            # MidTerm Presentation
+│   │   ├── RLPL/                           # Reference code and images for .tex files
+│   │   ├── main.tex                        # main presentation in .tex
+│   │   └── PreliminaryPresentation.pdf     # presentation in pdf
+│   └── FinalPresentation/                  # Final Presentation
+│       ├── RLPL/                           # Reference code and images for .tex files
+│       ├── main.tex                        # main presentation in .tex
+│       └── PreliminaryPresentation.pdf     # presentation in pdf
+├── reports/                                # Final report in latex
+├── research_paper/                         # Final research paper in latex
 ├── src/
-│   ├── component/                  # Main project source code
-│   │   ├── main.py                 # RL + classifier training loop
-│   │   ├── env.py                  # Custom Gym environment
-│   │   ├── model.py                # downstream model + policy network
-│   │   ├── utils.py                # Data loading & preprocessing
-│   │   ├── config.py               # Hyperparameters
-│   │   └── requirements.txt        # Python dependencies
+│   ├── component/                          # Main project source code
+│   │   ├── main.py                         # RL + classifier training loop
+│   │   ├── env.py                          # Custom Gym environment
+│   │   ├── model.py                        # downstream model + policy network
+│   │   ├── utils.py                        # Data loading & preprocessing
+│   │   ├── config.py                       # Hyperparameters
+│   │   └── requirements.txt                # Python dependencies
 │   ├── tests/
 │   │   └── trained_models_<model_name>_<data_source>.zip  # Saved weights (zip)
-│   └── Readme.md                   # Instructions for running code
+│   └── Readme.md                           # Instructions for running code
 ├── .gitignore
-└── Readme.md                       # Main project README (high-level)
+└── Readme.md                               # Main project README (high-level)
 ```
 
 ---
