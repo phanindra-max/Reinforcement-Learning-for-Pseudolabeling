@@ -123,5 +123,5 @@ capstone
 This approach is inspired by concepts from following research papers:
 
 - [A review of Pseudo-Labeling For Computer Vision](https://arxiv.org/pdf/2408.07221)
-- [RLGSSL (Reinforcement Learning for Graph-Based SSL)](https://arxiv.org/pdf/2405.01760)
+- [RLGSSL (Reinforcement Learning-Guided Semi-Supervised Learning)](https://arxiv.org/pdf/2405.01760)
 - [Selective Pseudo-Labeling with Reinforcement Learning for Semi-Supervised Domain Adaptation](https://arxiv.org/pdf/2012.03438)
