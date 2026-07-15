@@ -8,8 +8,6 @@ We have implemented a reinforcement learning framework for pseudo-labeling that 
 The RL agent decides which unlabeled samples should receive labels. The classifier retrains using these pseudo-labels. If validation error improves, the agent receives a positive reward.
 
 
-https://github.com/user-attachments/assets/0857a3ed-9e58-468c-b43e-a56fbee27a23
-
 ---
 
 ## Method Summary
